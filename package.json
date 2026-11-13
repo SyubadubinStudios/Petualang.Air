@@ -1,0 +1,1 @@
+﻿{"name":"petualang-air-tools","private":true,"type":"module","scripts":{"test":"node --test tools/*.test.mjs"}}
