@@ -1,5 +1,7 @@
 ﻿"""Rebuild original Petualang Air models with Blender --background --python tools/build_assets.py."""
-import bpy, math, random
+import bpy, math, random, sys
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
+from asset_detail import finish_materials, unwrap_missing, rope
 from pathlib import Path
 from mathutils import Vector
 random.seed(42)
@@ -32,7 +34,7 @@ def piece(name, pos, scale, material, kind='cube', bone=None):
     parts.append(ob); return ob
 # Forward in Blender is -Y; glTF conversion makes it +Z.
 piece('VestBody',(0,0,1.16),(.33,.20,.36),orange,bone='Spine')
-piece('Shirt',(0,.01,1.1),(.34,.19,.32),cream,bone='Spine')
+piece('Shirt',(0,.01,1.1),(.30,.175,.30),cream,bone='Spine')
 for side in [-1,1]:
     piece('LifeJacketPanel',(side*.19,-.16,1.18),(.16,.09,.32),orange,bone='Spine')
     for z in [1.03,1.27]: piece('Buckle',(side*.12,-.26,z),(.09,.025,.025),dark,bone='Spine')
@@ -63,12 +65,50 @@ piece('HatBand',(0,0,2.04),(.28,.26,.028),gold,'cylinder','Head')
 piece('NusantaraPin',(.13,-.245,2.11),(.045,.015,.045),gold,'sphere','Head')
 piece('PaddleShaft',(.47,-.10,.65),(.025,.025,.82),wood,'cylinder','ArmR')
 piece('CarbonBlade',(.47,-.10,-.08),(.12,.035,.28),dark,'sphere','ArmR')
+# Tailoring and woven bamboo ribs remain attached to their original animation bones.
+for side in [-1, 1]:
+    for z in [.94, 1.42]:
+        parts.append(rope('Vest piping', [(side*.04,-.257,z),(side*.22,-.257,z),(side*.32,-.20,z)], .008, cream, 'Spine'))
+    piece('Reflective shoulder tape',(side*.21,-.255,1.39),(.07,.008,.024),cream,bone='Spine')
+    piece('Webbing strap',(side*.23,-.262,1.12),(.018,.009,.22),dark,bone='Spine')
+    piece('Vest pocket',(side*.14,-.268,1.09),(.09,.022,.075),orange,bone='Spine')
+    for finger in range(4):
+        piece('Finger',(side*(.40+finger*.028),-.075,.76),(.018,.032,.065),skin,'sphere','ArmL' if side<0 else 'ArmR')
+for i in range(36):
+    a=i*math.tau/36
+    parts.append(rope('Caping woven rib',[(math.cos(a)*r,math.sin(a)*r*.93,2.25-r*.53) for r in [.03,.1,.2,.3,.41]],.0045,gold,'Head'))
+for r in [.12,.19,.26,.33,.40]:
+    parts.append(rope('Caping concentric weave',[(math.cos(a)*r,math.sin(a)*r*.93,2.25-r*.53) for a in [j*math.tau/72 for j in range(73)]],.003,brown,'Head'))
+# Reduce the oversized cartoon head while preserving facial feature alignment.
+for ob in parts:
+    if 'Head' in ob.vertex_groups:
+        pivot=Vector((0,0,1.52))
+        ob.location=pivot+(ob.location-pivot)*.84
+        ob.scale*=.84
+# Articulated elbows, wrists and knees keep hands/paddle together during strokes.
+for ob in parts:
+    side='L' if ob.location.x<0 else 'R'
+    target=None
+    if ob.name.startswith('Forearm'):target='Forearm'+side
+    elif ob.name.startswith(('Hand','Finger')):target='Hand'+side
+    elif ob.name.startswith(('PaddleShaft','CarbonBlade')):target='HandR'
+    elif ob.name.startswith(('Shin','Sandal')):target='Calf'+side
+    if target:
+        ob.vertex_groups.clear()
+        ob.vertex_groups.new(name=target).add(list(range(len(ob.data.vertices))),1,'REPLACE')
+finish_materials()
+unwrap_missing()
 # Join geometry while retaining rigid skin weights, then bind the skeleton.
 bpy.ops.object.select_all(action='DESELECT')
 for ob in parts: ob.select_set(True)
 bpy.context.view_layer.objects.active=parts[0];bpy.ops.object.join(); mesh=bpy.context.object;mesh.name='BangJopiMesh'
 bpy.ops.object.armature_add(); rig=bpy.context.object;rig.name='BangJopiRig';bpy.ops.object.mode_set(mode='EDIT');rig.data.edit_bones.remove(rig.data.edit_bones[0])
 bones=[('Root',(0,0,0),(0,0,.4),None),('Spine',(0,0,.8),(0,0,1.5),'Root'),('Head',(0,0,1.5),(0,0,2),'Spine'),('ArmL',(-.4,0,1.45),(-.4,0,.85),'Spine'),('ArmR',(.4,0,1.45),(.4,0,.85),'Spine'),('LegL',(-.17,0,.85),(-.17,0,.18),'Root'),('LegR',(.17,0,.85),(.17,0,.18),'Root')]
+for side,sign in [('L',-1),('R',1)]:
+    bones.extend([
+        ('Forearm'+side,(sign*.45,0,1.16),(sign*.45,-.025,.86),'Arm'+side),
+        ('Hand'+side,(sign*.45,-.025,.86),(sign*.45,-.04,.74),'Forearm'+side),
+        ('Calf'+side,(sign*.17,0,.47),(sign*.17,0,.15),'Leg'+side)])
 for name,head,tail,parent in bones:
     b=rig.data.edit_bones.new(name);b.head=head;b.tail=tail
     if parent:b.parent=rig.data.edit_bones[parent]
@@ -93,6 +133,9 @@ for clip in ['Idle','Paddle','Balance','Celebrate']:
         else:
             rig.pose.bones['ArmL'].rotation_euler.z=-2.4;rig.pose.bones['ArmR'].rotation_euler.z=2.4
             rig.pose.bones['Root'].location.z=abs(math.sin(phase))*.16
+        for side in ['L','R']:
+            rig.pose.bones['Forearm'+side].rotation_euler.x=.18+(.24*(1+math.sin(phase)) if clip=='Paddle' else .04*math.sin(phase))
+            if clip=='Idle':rig.pose.bones['Calf'+side].rotation_euler.x=.6
         for b in rig.pose.bones:
             b.keyframe_insert(data_path='rotation_euler',frame=frame);b.keyframe_insert(data_path='location',frame=frame)
     track=rig.animation_data.nla_tracks.new();track.name=clip;track.strips.new(clip,1,action)
@@ -105,6 +148,16 @@ bpy.ops.export_scene.gltf(filepath=str(OUT/'bang-jopi.glb'),export_format='GLB',
 def clear():
     bpy.ops.object.select_all(action='SELECT');bpy.ops.object.delete(use_global=False);parts.clear()
 def export(name):
+    finish_materials();unwrap_missing()
+    # Static props share one mesh with material groups instead of hundreds of draw calls.
+    bpy.ops.object.select_all(action='DESELECT')
+    meshes=[ob for ob in bpy.context.scene.objects if ob.type=='MESH']
+    for ob in meshes:ob.select_set(True)
+    if meshes:
+        bpy.context.view_layer.objects.active=meshes[0]
+        bpy.ops.object.join()
+        bpy.context.object.name=Path(name).stem
+    bpy.ops.wm.save_as_mainfile(filepath=str(OUT/Path(name).with_suffix('.blend')))
     bpy.ops.export_scene.gltf(filepath=str(OUT/name),export_format='GLB',export_animations=False)
 clear()
 # Klotok: colored hull, cabin, awning, engine and cargo.
@@ -115,6 +168,25 @@ piece('Roof',(0,.6,2),(1,1.15,.09),orange)
 for x in [-.5,.5]:piece('Window',(x,-.32,1.5),(.18,.02,.2),cream)
 piece('Engine',(0,2.5,.9),(.3,.3,.3),dark)
 for i in range(3):piece('Cargo',(0,-1.4+i*.35,1),(.5,.15,.25),gold)
+# Separate deck boards, cabin battens, window frames and outboard details.
+for i in range(17):
+    piece('Deck board',(0,-2.5+i*.30,.77),(.87,.143,.035),wood)
+for side in [-1,1]:
+    for i in range(12):
+        piece('Hull rib',(side*.94,-2.5+i*.44,.47),(.035,.028,.23),brown)
+    for i in range(9):
+        piece('Cabin siding',(side*.761,-.2+i*.20,1.30),(.015,.09,.55),wood)
+    for z in [1.27,1.73]:
+        piece('Window lintel',(side*.5,-.35,z),(.23,.04,.025),wood)
+    for x in [side*.5-.21,side*.5+.21]:
+        piece('Window jamb',(x,-.35,1.5),(.025,.04,.23),wood)
+    for y in [-1.9,1.9]:
+        bpy.ops.mesh.primitive_torus_add(major_radius=.23,minor_radius=.065,location=(side*1.07,y,.55),rotation=(0,math.pi/2,0))
+        bpy.context.object.data.materials.append(dark)
+piece('Propeller shaft',(0,2.64,.35),(.045,.045,.43),dark,'cylinder')
+for i in range(6):
+    piece('Engine cooling fin',(0,2.82,.75+i*.055),(.23,.025,.012),cream)
+parts.append(rope('Mooring rope',[(.72*math.cos(t),-1.65+.32*math.sin(t),.85+.002*t) for t in [i*.12 for i in range(160)]],.025,brown))
 export('klotok.glb');clear()
 # Rumah panggung with curved upturned roof inspired by Minangkabau silhouettes.
 for x in [-1.3,1.3]:
@@ -129,6 +201,23 @@ faces=[]
 for i in range(6):
     for j in range(2):a=i*3+j;faces.append((a,a+1,a+4,a+3))
 data=bpy.data.meshes.new('RoofMesh');data.from_pydata(vertices,[],faces);data.materials.append(brown);ob=bpy.data.objects.new('CurvedRoof',data);bpy.context.collection.objects.link(ob)
+for side in [-1,1]:
+    for i in range(13):
+        piece('Wall timber board',(-1.26+i*.21,side*1.115,2.10),(.098,.018,.61),wood)
+    for x in [-.8,0,.8]:
+        piece('Recessed window',(x,side*1.15,2.15),(.18,.025,.28),dark)
+        for z in [1.85,2.45]:piece('Window frame',(x,side*1.18,z),(.22,.025,.025),gold)
+        piece('Window mullion',(x,side*1.18,2.15),(.018,.025,.28),wood)
+# Individual roof courses follow the curved silhouette, giving readable highlights.
+for i in range(32):
+    x=-1.88+i*3.76/31
+    high=3.15+.65*(abs(x)/1.9)**2
+    parts.append(rope('Roof bamboo batten',[(x,-1.5,high-.59),(x,0,high+.015),(x,1.5,high-.59)],.022,brown))
+for step in range(5):
+    piece('Entry stair',(0,-2.25+step*.22,.18+step*.24),(.50,.18,.07),wood)
+for x in [-1.45,1.45]:
+    for y in [-1,-.5,0,.5,1]:piece('Veranda spindle',(x,y,1.80),(.025,.025,.30),wood)
+    piece('Veranda handrail',(x,0,2.1),(.045,1.22,.045),gold)
 export('rumah-adat.glb');clear()
 coral=mat('Coral',(.96,.25,.32));teal=mat('SeaFan',(.09,.67,.6))
 for i in range(12):
@@ -136,4 +225,18 @@ for i in range(12):
     piece('CoralBranch',(math.cos(a)*r,math.sin(a)*r,.45+i*.035),(.10,.10,.45+i*.035),coral if i%2 else teal,'cone')
     piece('CoralTip',(math.cos(a)*r,math.sin(a)*r,.9+i*.07),(.20,.20,.12),coral,'sphere')
 export('coral.glb')
+clear()
+# Hero raft deck: rounded bamboo, growth nodes and individual rope turns.
+for i in range(-3,4):
+    log=piece('Bamboo culm',(i*.36,0,0),(.17,.17,2.15),wood,'cylinder')
+    log.rotation_euler.x=math.pi/2
+    for y in [-1.8,-.9,0,.9,1.8]:
+        bpy.ops.mesh.primitive_torus_add(major_radius=.172,minor_radius=.012,major_segments=24,minor_segments=6,location=(i*.36,y,0),rotation=(math.pi/2,0,0))
+        bpy.context.object.data.materials.append(gold)
+    for y in [-1.4,1.4]:
+        for turn in range(3):
+            parts.append(rope('Hemp lashing',[(i*.36+.185*math.cos(a),y+turn*.025,.185*math.sin(a)) for a in [j*math.tau/32 for j in range(33)]],.012,brown))
+for y in [-1.4,1.4]:
+    piece('Cross brace',(0,y,.13),(1.35,.09,.07),wood)
+export('raft-deck.glb')
 print('ASSETS_READY',sorted(p.name for p in OUT.iterdir()))

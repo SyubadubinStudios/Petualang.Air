@@ -57,3 +57,24 @@ Screenshot diambil langsung dari aplikasi WebView2, bukan mockup atau gambar gen
 - [Credits](screenshots/credits.png)
 
 Uji controller virtual membuktikan pemetaan dan penanganan disconnect, bukan kompatibilitas semua perangkat fisik. Pengujian shader/runtime tidak membuktikan target 60 FPS pada semua GPU atau kualitas audio menurut pendengaran. Catat perangkat dan preset saat melakukan pengujian performa.
+
+
+## Validasi peningkatan aset Blender (13 November 2026)
+
+- `python tools/validate_assets.py`: lima GLB lolos batas geometri/ukuran, tekstur tertanam, UV, PBR, serta kontrak skin dan animasi.
+- `dotnet test PetualangAir.Tests`: 16 tes lulus.
+- `node --test tools/input.test.mjs tools/weather.test.mjs`: 5 tes lulus.
+- Build WPF Debug dan publish Web Release berhasil.
+- `tools/runtime_smoke.py`: 21 pemeriksaan WebView2 lulus dengan save QA terpisah; enam bioma, empat animasi, aksesori, progres, audio, dan WebGL diperiksa.
+- `tools/capture_docs.py`: semua preset, tiga soundtrack, dan jeda credits lulus; lima screenshot diperbarui dari aplikasi.
+
+Build host web sudah diperiksa, tetapi paket native Linux/macOS dan benchmark GPU fisik tidak dijalankan ulang dalam sesi ini. Status CI untuk commit rilis tersedia pada halaman GitHub Actions.
+
+
+## Validasi flora dan serangga tambahan
+
+`python tools/validate_assets.py` juga memeriksa enam GLB ekosistem: maksimal 1,5 MB, 12.000 segitiga, delapan primitive per aset, UV, buffer tertanam, dan pivot sayap. `node --test tools/habitats.test.mjs` menjalankan tiga tes pemetaan habitat, batas kepadatan, serta jarak aman dari dermaga dan koridor awal. Tes habitat ikut proses build installer.
+
+Dengan aplikasi WPF memakai save QA terpisah dan CDP lokal port 9228, jalankan `python tools/runtime_ecosystem.py`. Pemeriksaan mencakup enam bioma, pivot sayap, perubahan tinggi tanaman mengapung, pangkal tanaman laut yang tetap, pemisahan dari objek tabrakan, dan error WebGL. Pergantian karang/gambut tiga kali mempertahankan 630 geometri dan 98 tekstur pada pengujian lokal; ini menguji kestabilan jumlah resource, bukan total VRAM atau target FPS. Screenshot dan laporan tersimpan di `artifacts/`, dengan satu screenshot dokumentasi di `docs/screenshots/ecosystem.png`.
+
+Build WPF dan publish Web berhasil; delapan tes JavaScript lulus. Model dan perilaku baru diuji pada WebView2 Windows. Host native Linux/macOS belum diuji ulang untuk tambahan ini.

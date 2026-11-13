@@ -1,16 +1,18 @@
 ﻿import * as THREE from 'three';
+import { AquaticEcosystem } from './ecosystem.js';
+import { ECOSYSTEM_ASSETS } from './habitats.js';
 import { NaturalDetails } from './nature.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 export function disposeTree(root) {
     const geometries = new Set(), materials = new Set();
-    root.traverse(o => { if (o.geometry) geometries.add(o.geometry); if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => materials.add(m)); });
+    root.traverse(o => { if (o.isInstancedMesh) o.dispose(); if (o.geometry) geometries.add(o.geometry); if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => materials.add(m)); });
     geometries.forEach(g => g.dispose()); materials.forEach(m => m.dispose());
     root.removeFromParent();
 }
 export async function loadAssets() {
     const loader = new GLTFLoader(), assets = {};
-    await Promise.all(['bang-jopi', 'klotok', 'rumah-adat', 'coral'].map(async name => { assets[name] = await loader.loadAsync(`models/${name}.glb`); }));
+    await Promise.all(['bang-jopi', 'klotok', 'rumah-adat', 'coral', 'raft-deck', ...ECOSYSTEM_ASSETS].map(async name => { assets[name] = await loader.loadAsync(`models/${name}.glb`); }));
     return assets;
 }
 function mesh(parent, geometry, color, x = 0, y = 0, z = 0) {
@@ -20,7 +22,7 @@ function mesh(parent, geometry, color, x = 0, y = 0, z = 0) {
 function box(parent, color, x, y, z, sx, sy, sz) { return mesh(parent, new THREE.BoxGeometry(sx, sy, sz), color, x, y, z); }
 function sphere(parent, color, x, y, z, sx, sy = sx, sz = sx) { const o = mesh(parent, new THREE.IcosahedronGeometry(1, 3), color, x, y, z); o.scale.set(sx, sy, sz); return o; }
 function cylinder(parent, color, x, y, z, r, h) { return mesh(parent, new THREE.CylinderGeometry(r, r * 1.1, h, 7), color, x, y, z); }
-function cloneAsset(assets, name) {
+export function cloneAsset(assets, name) {
     const clone = assets[name].scene.clone(true);
     clone.traverse(o => { if (o.isMesh) { o.geometry = o.geometry.clone(); o.material = o.material.clone(); o.castShadow = true; o.receiveShadow = true; } });
     return clone;
@@ -69,6 +71,7 @@ export class BiomeWorld {
         this.collectibles = []; this.obstacles = []; this.animated = [];
         this.dock = new THREE.Vector3(0, 0, -8);
         this.buildDock(); this.buildEnvironment(); this.buildPickups(); this.nature = new NaturalDetails(this.root, biome);
+        this.ecosystem = new AquaticEcosystem(this.root, assets, biome);
     }
     addAsset(name, x, z, scale = 1) {
         const g = cloneAsset(this.assets, name); g.position.set(x, 0, z); g.scale.setScalar(scale); this.root.add(g); return g;
@@ -176,6 +179,7 @@ export class BiomeWorld {
     update(time, dt, wave) {
         this.beacon.rotation.y += dt;
         this.nature.update(time);
+        this.ecosystem.update(time, wave);
         this.collectibles.forEach(c => {
             c.position.y = wave(c.position.x, c.position.z) + (c.userData.type === 'Dolphin' ? .5 + Math.sin(time * 2 + c.userData.phase) * .4 : .75);
             if (c.userData.type === 'Fish' || c.userData.type === 'Dolphin') c.rotation.y = Math.sin(time * .6 + c.userData.phase);

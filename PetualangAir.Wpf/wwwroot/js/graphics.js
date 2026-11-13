@@ -22,7 +22,7 @@ function normalTexture(size = 256) {
         const dx = Math.cos(u * 7 + Math.sin(v * 3)) * .18 + Math.cos(u * 13 - v * 9) * .10;
         const dy = Math.sin(v * 9 + Math.cos(u * 5)) * .18 + Math.sin(v * 17 + u * 11) * .10;
         const n = new THREE.Vector3(dx, dy, 1).normalize(), i = (y * size + x) * 4;
-        data[i] = (n.x * .5 + .5) * 255; data[i + 1] = (n.y * .5 + .5) * 255; data[i + 2] = n.z * 255; data[i + 3] = 255;
+        data[i] = (n.x * .5 + .5) * 255; data[i + 1] = (n.y * .5 + .5) * 255; data[i + 2] = (n.z * .5 + .5) * 255; data[i + 3] = 255;
     }
     const texture = new THREE.DataTexture(data, size, size); texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
     texture.magFilter = THREE.LinearFilter; texture.minFilter = THREE.LinearMipmapLinearFilter; texture.generateMipmaps = true; texture.needsUpdate = true; return texture;
@@ -31,7 +31,7 @@ export class CinematicGraphics {
     constructor(renderer, scene, camera) {
         this.renderer = renderer; this.scene = scene; this.camera = camera; this.frame = 0; this.visualTime = 0;
         this.sky = new Sky(); this.sky.scale.setScalar(10000); scene.add(this.sky);
-        this.sun = new THREE.Vector3(); this.sun.setFromSphericalCoords(1, THREE.MathUtils.degToRad(76), THREE.MathUtils.degToRad(155));
+        this.sun = new THREE.Vector3(); this.sun.setFromSphericalCoords(1, THREE.MathUtils.degToRad(58), THREE.MathUtils.degToRad(155));
         const u = this.sky.material.uniforms; u.turbidity.value = 5; u.rayleigh.value = 2.2; u.mieCoefficient.value = .007; u.mieDirectionalG.value = .85; u.sunPosition.value.copy(this.sun);
         this.pmrem = new THREE.PMREMGenerator(renderer);
         const envScene = new THREE.Scene(); envScene.add(this.sky);

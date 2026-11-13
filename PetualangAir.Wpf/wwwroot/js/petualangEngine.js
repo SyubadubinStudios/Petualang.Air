@@ -4,7 +4,7 @@ import { CinematicGraphics } from './graphics.js';
 import { InputController } from './input.js';
 import { NusantaraAudio } from './audio.js';
 import { WeatherSystem } from './weather.js';
-import { BiomeWorld, loadAssets, disposeTree } from './world.js';
+import { BiomeWorld, loadAssets, cloneAsset, disposeTree } from './world.js';
 
 const BIOME_CONFIGS = {
     SungaiGunung: {
@@ -50,12 +50,21 @@ class PetualangEngineClass {
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
         this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5)); this.renderer.setSize(innerWidth, innerHeight);
         this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        // Asset textures are shared by world clones; configure once and release at shutdown.
+        this.assetTextures = new Set();
+        Object.values(this.assets).forEach(asset => asset.scene.traverse(object => {
+            const materials = Array.isArray(object.material) ? object.material : [object.material];
+            materials.filter(Boolean).forEach(material => Object.values(material).forEach(value => {
+                if (value?.isTexture) this.assetTextures.add(value);
+            }));
+        }));
+        this.assetTextures.forEach(texture => { texture.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy()); texture.needsUpdate = true; });
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.25;
         this.controls = new OrbitControls(this.camera, canvas); this.controls.enableDamping = true;
         this.controls.maxPolarAngle = Math.PI / 2 - .08; this.controls.minDistance = 5; this.controls.maxDistance = 28; this.controls.enablePan = false;
         this.ambientLight = new THREE.HemisphereLight(0xf4f5dd, 0x285754, 1.6); this.scene.add(this.ambientLight);
         this.sunLight = new THREE.DirectionalLight(0xffefd0, 2.2); this.sunLight.position.set(25, 40, -15); this.sunLight.castShadow = true;
-        this.sunLight.shadow.mapSize.set(1024, 1024); Object.assign(this.sunLight.shadow.camera, { left: -35, right: 35, top: 35, bottom: -35 }); this.sunLight.shadow.bias = -.001; this.scene.add(this.sunLight);
+        this.sunLight.shadow.mapSize.set(1024, 1024); Object.assign(this.sunLight.shadow.camera, { left: -35, right: 35, top: 35, bottom: -35 }); this.sunLight.shadow.bias = -.0002; this.sunLight.shadow.normalBias = .025; this.scene.add(this.sunLight);
         this.graphics = new CinematicGraphics(this.renderer, this.scene, this.camera);
         this.waterMesh = this.graphics.water;
         this.weather = new WeatherSystem(this.scene);
@@ -84,11 +93,7 @@ class PetualangEngineClass {
         if (this.raftBase) disposeTree(this.raftBase);
         const g = this.raftBase = new THREE.Group(); this.raftGroup.add(g);
         const box = (color, x, y, z, a, b, c) => this.makeMesh(g, new THREE.BoxGeometry(a, b, c), color, x, y, z);
-        for (let i = -3; i <= 3; i++) {
-            const log = this.makeMesh(g, new THREE.CylinderGeometry(.17, .19, 4.3, 8), level < 3 ? 0xc5a059 : 0x72432b, i * .36, 0, 0); log.rotation.x = Math.PI / 2;
-            for (const z of [-1.4, 0, 1.4]) { const ring = this.makeMesh(g, new THREE.TorusGeometry(.18, .025, 4, 8), 0x6a5930, i * .36, 0, z); }
-        }
-        for (const z of [-1.4, 1.4]) box(0x493724, 0, .12, z, 2.7, .16, .2);
+        g.add(cloneAsset(this.assets, 'raft-deck'));
         if (level >= 2) for (const x of [-1.6, 1.6]) {
             const hull = this.makeMesh(g, new THREE.CylinderGeometry(level === 2 ? .38 : .24, .4, level === 2 ? 2.4 : 4.7, 10), level === 2 ? 0x376e79 : level === 3 ? 0x704c36 : 0xddd4b2, x, -.15, 0); hull.rotation.x = Math.PI / 2;
             box(0x8a6a42, x / 2, .15, -.8, 2, .12, .15); box(0x8a6a42, x / 2, .15, .8, 2, .12, .15);
@@ -260,7 +265,7 @@ class PetualangEngineClass {
     updateWater() {
         const r=this.raftState;
         this.graphics.update(this.time, r, this.weather, this.currentBiome, (x,z)=>this.getWaveHeight(x,z,this.time));
-        this.sunLight.position.set(r.x+25,40,r.z-15);this.sunLight.target.position.set(r.x,0,r.z);this.sunLight.target.updateMatrixWorld();
+        this.sunLight.position.copy(this.graphics.sun).multiplyScalar(65).add(new THREE.Vector3(r.x,0,r.z));this.sunLight.target.position.set(r.x,0,r.z);this.sunLight.target.updateMatrixWorld();
     }
     updateTelemetry() {
         if (!this.world) return;
@@ -291,6 +296,7 @@ class PetualangEngineClass {
         this.clearParticles(); this.world?.dispose(); this.weather?.dispose(); this.graphics?.dispose(); this.mixer?.stopAllAction();
         if (this.scene) disposeTree(this.scene);
         Object.values(this.assets || {}).forEach(asset => disposeTree(asset.scene));
+        this.assetTextures?.forEach(texture => texture.dispose()); this.assetTextures?.clear();
         this.renderer?.dispose(); await this.audio.dispose(); this.dotnetRef = null;
     }
 }

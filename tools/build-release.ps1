@@ -1,5 +1,5 @@
 ﻿param(
-    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '1.0.0',
+    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '1.2.0',
     [switch]$SkipTests
 )
 $ErrorActionPreference = 'Stop'
@@ -10,7 +10,7 @@ try {
     if (-not $SkipTests) {
         dotnet test PetualangAir.sln -c Release
         if ($LASTEXITCODE -ne 0) { throw 'Domain tests failed' }
-        node --test tools/input.test.mjs tools/weather.test.mjs
+        node --test tools/input.test.mjs tools/weather.test.mjs tools/habitats.test.mjs
         if ($LASTEXITCODE -ne 0) { throw 'JavaScript tests failed' }
     }
     $publishDir = Join-Path $repoRoot "artifacts/publish-$Version"

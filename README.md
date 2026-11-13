@@ -32,14 +32,31 @@ WASD mendayung, Space turbo, mouse mengorbit kamera, E membuka pasar, M misi, J 
 ## Isi ekspedisi
 
 - Enam lingkungan: jeram pegunungan, bakau gambut, danau vulkanik, kanal kota, karang, dan samudra.
+- Kupu-kupu dan capung beranimasi, teratai dan eceng gondok mengapung, serta lamun dan rumput laut di tepian karang.
 - Misi, reputasi Sungai Lestari, barter, artefak budaya, kosmetik batik, dan pembukaan bioma bertahap.
 - Empat rakit; jaring, lampu, bumper, kompas; kelapa dan kopi untuk stamina.
 - Air berpantulan, langit atmosfer, bayangan, vegetasi bergerak, cuaca, bloom, dan preset Low–Ultra.
-- Model GLB skeletal dengan animasi kayuhan, keseimbangan, idle, serta selebrasi.
+- Aset Blender lokal dengan tekstur PBR, detail anyaman dan kayu, dek bambu, serta karakter 13 tulang dengan empat animasi.
 - Menu utama sinematik, options yang tersimpan, scrolling credits, dan tiga soundtrack orisinal adaptif.
 - Save otomatis, migrasi progres lama, serta cadangan sebelum memulai ekspedisi baru.
 
 ![Gameplay Petualang Air](docs/screenshots/gameplay.png)
+
+## Galeri lokasi
+
+Tepian sungai dengan teratai, kupu-kupu, dan capung:
+
+![Ekosistem sungai](docs/screenshots/river-wetlands.png)
+
+Rawa gambut dengan tanaman mengapung:
+
+![Rawa gambut](docs/screenshots/peat-wetlands.png)
+
+Lamun dan rumput laut di tepian karang:
+
+![Tepian karang](docs/screenshots/coral-shallows.png)
+
+[Lihat enam lokasi beserta keterangan dan cara mengambil screenshot](docs/GALLERY.md).
 
 Visual menggunakan aset semi-realistis dan pipeline sinematik; tidak diklaim setara produksi AAA. Performa bergantung perangkat dan preset.
 

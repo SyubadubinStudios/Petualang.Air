@@ -5,15 +5,15 @@ Repo: [SyubadubinStudios/Petualang.Air](https://github.com/SyubadubinStudios/Pet
 ## Membuat installer lokal
 
 ```powershell
-./tools/build-release.ps1 -Version 1.0.0
+./tools/build-release.ps1 -Version 1.2.0
 ```
 
 Skrip menjalankan pengujian C# dan JS, mem-publish `win-x64` self-contained, memverifikasi aset, lalu mengompilasi installer Inno Setup 6.4.3. Compiler dan bootstrapper WebView2 diunduh dari sumber resmi dan disimpan dalam `artifacts/dependencies/`. Hash SHA-256 compiler dipatok dari manifest `.issig` rilis resmi; bootstrapper WebView2 diperiksa tanda tangan Authenticode Microsoft-nya.
 
 Hasil dalam `artifacts/release/`:
 
-- `PetualangAir-Setup-1.0.0-win-x64.exe`
-- `PetualangAir-1.0.0-win-x64-portable.zip`
+- `PetualangAir-Setup-1.2.0-win-x64.exe`
+- `PetualangAir-1.2.0-win-x64-portable.zip`
 - `SHA256SUMS.txt`
 
 Installer memasang game untuk pengguna aktif di `%LocalAppData%/Programs/Syubadubin Studios/Petualang Air`, membuat shortcut Start Menu, menyediakan pilihan shortcut desktop, dan mendukung uninstall. .NET sudah disertakan. WebView2 diperiksa sebelum instalasi; jika belum tersedia, bootstrapper Microsoft memerlukan internet untuk memasangnya. Setelah dependensi tersedia, game tidak memerlukan internet.
@@ -40,8 +40,8 @@ Hasil dalam `artifacts/desktop/`: AppImage dan `tar.gz` Linux x64, serta `dmg` d
 [Workflow release](../.github/workflows/release.yml) berjalan pada push `main`/`feat/**`, pull request ke `main`, manual dispatch, dan tag `v*`. Run biasa menghasilkan artifact yang dapat diunduh; **hanya push tag rilis** yang menerbitkan GitHub Release.
 
 ```powershell
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.2.0
+git push origin v1.2.0
 ```
 
 Tag harus menunjuk commit yang sudah direview dan lulus pengujian. Gunakan versi `major.minor.patch`; workflow menolak input versi lain. Rilis berisi installer dan portable ZIP Windows, paket Linux dan macOS, serta checksum per platform (`SHA256SUMS.txt`, `SHA256SUMS-linux.txt`, `SHA256SUMS-macos.txt`). Job `desktop` menjalankan tes domain, tes JS, dan uji asap Electron pada runner Linux dan macOS sebelum memaketkan. Rerun tag yang sama mengganti aset bernama sama melalui `gh release upload --clobber`.
