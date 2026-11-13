@@ -434,3 +434,6 @@ FodyWeavers.xsd
 artifacts/
 *.blend1
 
+
+# Electron desktop host (Linux/macOS)
+desktop/build/

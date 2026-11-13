@@ -11,6 +11,7 @@ public partial class MainWindow : Window
         var serviceCollection = new ServiceCollection();
         serviceCollection.AddWpfBlazorWebView();
         serviceCollection.AddSingleton<GameStateService>();
+        serviceCollection.AddSingleton<IAppShell, WpfShell>();
 
 #if DEBUG
         serviceCollection.AddBlazorWebViewDeveloperTools();
