@@ -24,6 +24,17 @@ python tools/runtime_smoke.py
 
 Skrip menguji GLB skeletal, pickup aktual, callback misi, keenam bioma, badai/pelangi, pembelian aksesori, minuman, input controller virtual, audio, dan tampilan penutup kampanye. Skrip sengaja mengubah save percobaan untuk menjalankan jalur kampanye. Jangan gunakan save asli. Port debugging hanya untuk pengembangan; tidak diaktifkan oleh build distribusi.
 
+## Host Electron (Linux/macOS)
+
+```bash
+cd desktop
+npm ci
+npm run build:web
+npm run smoke
+```
+
+Uji asap menjalankan Electron dengan save sementara lalu memeriksa label edisi, konteks WebGL2, kompilasi shader, decoding tiga soundtrack Ogg, tulisan save ke disk, keluar melalui jembatan shell, dan pemulihan progres setelah aplikasi dibuka ulang. Screenshot disimpan ke `artifacts/desktop-smoke-<platform>.png`. Pada mesin tanpa GPU gunakan `SMOKE_SOFTWARE_GL=1`; di Linux tanpa layar jalankan melalui `xvfb-run`. CI menjalankannya pada runner Linux dan macOS sebelum pemaketan; hasil itu membuktikan host berfungsi di runner tersebut, bukan performa atau kompatibilitas GPU dan gamepad fisik.
+
 ## Pemeriksaan manual sebelum rilis
 
 1. Mulai dari menu utama, lanjutkan, buka options, ubah preset/FOV/audio, dan buka ulang untuk memeriksa persistensi.
@@ -33,6 +44,7 @@ Skrip menguji GLB skeletal, pickup aktual, callback misi, keenam bioma, badai/pe
 5. Dengarkan semua soundtrack, crossfade, mute, dan pemisahan volume musik/efek.
 6. Periksa credits berjalan, jeda credits, mode pengurangan gerakan, dan ekspedisi baru dengan cadangan.
 7. Jalankan installer pada Windows bersih, termasuk kasus WebView2 belum terpasang, lalu uji upgrade dan uninstall.
+8. Pada Linux dan macOS fisik, jalankan paket rilis lalu ulangi langkah 1–6, termasuk gamepad, layar penuh, dan lokasi save.
 
 ## Screenshot
 

@@ -9,7 +9,7 @@
     <RootNamespace>PetualangAir.Wpf</RootNamespace>
     <AssemblyName>PetualangAir.Web</AssemblyName>
     <CompressionEnabled>false</CompressionEnabled>
-    <SharedRoot>..\PetualangAir.Wpf\</SharedRoot>
+    <SharedRoot>../PetualangAir.Wpf/</SharedRoot>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,15 +17,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="$(SharedRoot)Services\**\*.cs" Link="Services\%(RecursiveDir)%(Filename)%(Extension)" />
-    <RazorComponent Include="$(SharedRoot)Components\**\*.razor" Link="Components\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="$(SharedRoot)Services/**/*.cs" Link="Services/%(RecursiveDir)%(Filename)%(Extension)" />
+    <RazorComponent Include="$(SharedRoot)Components/**/*.razor" Link="Components/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
   <!-- The engine, styles, models, audio, and vendored Three.js are shared with the WPF host rather than duplicated. -->
   <Target Name="CopySharedGameAssets" AfterTargets="Publish">
     <ItemGroup>
-      <SharedGameAsset Include="$(SharedRoot)wwwroot\**\*" Exclude="$(SharedRoot)wwwroot\index.html;$(SharedRoot)wwwroot\models\*.blend*" />
+      <SharedGameAsset Include="$(SharedRoot)wwwroot/**/*" Exclude="$(SharedRoot)wwwroot/index.html;$(SharedRoot)wwwroot/models/*.blend*" />
     </ItemGroup>
-    <Copy SourceFiles="@(SharedGameAsset)" DestinationFiles="@(SharedGameAsset->'$(PublishDir)wwwroot\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(SharedGameAsset)" DestinationFiles="@(SharedGameAsset->'$(PublishDir)wwwroot/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
   </Target>
 </Project>

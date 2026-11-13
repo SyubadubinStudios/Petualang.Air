@@ -2,7 +2,7 @@
 
 **Dibuat oleh Ariana Mischa Fadhila dari Syubadubin Studios.**
 
-Game eksplorasi perairan Nusantara untuk Windows: enam bioma, 12 misi ekologi dan budaya, pasar terapung, rakit modular, serta perjalanan dari hulu hingga samudra.
+Game eksplorasi perairan Nusantara untuk Windows, Linux, dan macOS: enam bioma, 12 misi ekologi dan budaya, pasar terapung, rakit modular, serta perjalanan dari hulu hingga samudra.
 
 ![Menu utama Petualang Air](docs/screenshots/main-menu.png)
 
@@ -10,10 +10,21 @@ Game eksplorasi perairan Nusantara untuk Windows: enam bioma, 12 misi ekologi da
 
 Unduh installer atau paket portable dari [GitHub Releases](https://github.com/SyubadubinStudios/Petualang.Air/releases). Installer menyertakan .NET dan memasang WebView2 bila diperlukan. Windows 10 versi 2004 atau lebih baru, CPU x64, dan GPU WebGL2 diperlukan. Setelah dependensi terpasang, game dapat dimainkan offline.
 
+Untuk Linux (x64) tersedia AppImage dan `tar.gz`; untuk macOS (Intel dan Apple Silicon) tersedia `dmg` dan `zip`. Keduanya membawa runtime sendiri dan tidak memerlukan .NET. Paket macOS belum ditandatangani/dinotarisasi; lihat [Build & release](docs/RELEASE.md) untuk cara membukanya.
+
 Untuk menjalankan dari source, instal .NET SDK 10:
 
 ```powershell
 dotnet run --project PetualangAir.Wpf
+```
+
+Di Linux/macOS (perlu juga Node.js 22+):
+
+```bash
+cd desktop
+npm ci
+npm run build:web
+npm start
 ```
 
 WASD mendayung, Space turbo, mouse mengorbit kamera, E membuka pasar, M misi, J koleksi budaya, 1/2 minuman, Escape jeda, dan F11 layar penuh. Gamepad standar juga didukung.
@@ -51,8 +62,8 @@ npm test
 ./tools/build-release.ps1 -Version 1.0.0
 ```
 
-Node.js hanya diperlukan untuk tes JS. Blender, Python/NumPy, dan FFmpeg hanya diperlukan bila membuat ulang model atau musik. Aset GLB/Ogg dan Three.js sudah disertakan.
+Node.js diperlukan untuk tes JS dan host Electron Linux/macOS. Blender, Python/NumPy, dan FFmpeg hanya diperlukan bila membuat ulang model atau musik. Aset GLB/Ogg dan Three.js sudah disertakan.
 
-Workflow GitHub membangun installer/portable/checksum pada push dan PR; push tag `vMAJOR.MINOR.PATCH` menerbitkan GitHub Release. Installer game saat ini belum ditandatangani dengan sertifikat penerbit.
+Workflow GitHub membangun paket Windows, Linux, dan macOS beserta checksum pada push dan PR; push tag `vMAJOR.MINOR.PATCH` menerbitkan GitHub Release. Installer game saat ini belum ditandatangani dengan sertifikat penerbit.
 
 Source berlisensi [MIT](LICENSE). Lihat [pemberitahuan pihak ketiga](THIRD-PARTY-NOTICES.md). Workspace pengembangan: `C:\experiment\syubadubin\Petualang.Air`.

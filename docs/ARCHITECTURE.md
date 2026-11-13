@@ -14,7 +14,7 @@ flowchart LR
     E --> D[Dunia bioma dan cuaca]
 ```
 
-WPF menangani jendela dan penyimpanan saat penutupan. Blazor mengelola UI dan aturan domain C#. Engine JS menjalankan simulasi/render loop lokal; C# menerima event koleksi, tabrakan, pergantian dermaga, telemetry satu detik, dan stamina setiap 300 ms. Interop tidak dipanggil untuk setiap vertex atau frame.
+Di Windows, WPF menangani jendela dan penyimpanan saat penutupan. Di Linux/macOS, UI Razor dan `GameStateService` yang sama dikompilasi sebagai Blazor WebAssembly (`PetualangAir.Web`) dan dijalankan dalam Electron (`desktop/`); lihat bagian [Host Linux dan macOS](#host-linux-dan-macos). Blazor mengelola UI dan aturan domain C#. Engine JS menjalankan simulasi/render loop lokal; C# menerima event koleksi, tabrakan, pergantian dermaga, telemetry satu detik, dan stamina setiap 300 ms. Interop tidak dipanggil untuk setiap vertex atau frame.
 
 ## Modul utama
 
@@ -29,6 +29,9 @@ WPF menangani jendela dan penyimpanan saat penutupan. Blazor mengelola UI dan at
 | `input.js` | Keyboard, deadzone, pemetaan gamepad, navigasi menu |
 | `audio.js` | Web Audio buses, soundtrack, efek, crossfade |
 | `tools/` | Pembuat aset/musik, uji runtime, pembuat installer |
+| `Services/IAppShell.cs` | Operasi jendela (keluar, layar penuh, label edisi) yang disediakan tiap host |
+| `PetualangAir.Web/` | Host Blazor WebAssembly: `Program.cs`, `BrowserShell`, `SaveMirror`, `index.html`, `shell.js` |
+| `desktop/` | Host Electron: `main.cjs`, `preload.cjs`, uji asap, konfigurasi electron-builder |
 
 ## Aturan penting
 
@@ -38,6 +41,15 @@ WPF menangani jendela dan penyimpanan saat penutupan. Blazor mengelola UI dan at
 - Kegagalan membuat cadangan menghentikan reset ekspedisi. Reset tidak menghapus options.
 - Event JS diserialkan melalui antrean. Event koleksi dengan bioma yang sudah tidak aktif diabaikan.
 - Render target, geometry, material, listener, audio context, dan referensi interop dibersihkan saat lifecycle berakhir.
+
+## Host Linux dan macOS
+
+`PetualangAir.Web` tidak menyalin kode: komponen Razor dan `Services/` ditautkan dari `PetualangAir.Wpf`, sedangkan engine JS, CSS, model, audio, dan Three.js disalin dari `PetualangAir.Wpf/wwwroot` saat publish. Hanya `index.html` yang berbeda (memuat `blazor.webassembly.js` dan `shell.js`).
+
+- Komponen tidak boleh memanggil API WPF secara langsung. Operasi jendela melewati `IAppShell` (`WpfShell` di Windows, `BrowserShell` di WebAssembly).
+- File I/O WebAssembly berada di memori. `SaveMirror` memuat save dari host sebelum `GameStateService` dibuat, lalu menulis kembali `save.json` dan `save.json.previous` setiap kali isinya berubah. `GameStateService` sendiri tidak diubah.
+- Electron menyajikan hasil publish dari origin privat `app://petualang` (tanpa port HTTP lokal) dan menulis save secara atomik ke `<appData>/PetualangAir/save.json`, format yang sama dengan Windows. Halaman berjalan dengan `contextIsolation` dan `sandbox`; preload hanya membuka baca/tulis dua file save, keluar, dan layar penuh.
+- Electron dipilih karena membawa Chromium yang sama dengan WebView2, sehingga WebGL2, Web Audio, dan Gamepad API berperilaku seragam. Host berbasis WebView sistem (WebKitGTK/WKWebView) tidak dipakai karena dukungan WebGL2 dan decoding Ogg-nya bervariasi antar distribusi.
 
 ## Pengembangan
 
