@@ -60,6 +60,8 @@ try {
     app = await launch();
     await app.waitFor('!!document.querySelector(".main-menu")', 'main menu');
     check(await app.evaluate('document.querySelector(".title-footer").innerText.toUpperCase()').then(text => text.includes(editions[process.platform])), `edition label is ${editions[process.platform]}`);
+    const version = process.env.RELEASE_VERSION ?? JSON.parse(fs.readFileSync(path.join(here, 'package.json'), 'utf8')).version;
+    check(await app.evaluate('document.querySelector(".title-footer").innerText').then(text => text.includes(`v${version}`)), `menu shows build version v${version}`);
     check(await app.evaluate('PetualangEngine.renderer.capabilities.isWebGL2 && !PetualangEngine.renderer.getContext().isContextLost()'), 'WebGL2 context is live');
     check(await app.evaluate('PetualangEngine.renderer.info.programs.every(p => !p.diagnostics || p.diagnostics.runnable !== false)'), 'shaders compiled');
     check(await app.evaluate('(async () => { PetualangEngine.audio.unlock(); await PetualangEngine.audio.loadingTracks; return PetualangEngine.audio.tracksReady && Object.keys(PetualangEngine.audio.tracks).length === 3; })()'), 'three Ogg soundtracks decoded');
