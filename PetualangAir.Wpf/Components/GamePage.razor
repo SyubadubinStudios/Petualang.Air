@@ -57,14 +57,14 @@
                 <div class="studio-mark"><span class="studio-emblem">S</span> SYUBADUBIN STUDIOS <span class="edition">AN ORIGINAL EXPEDITION</span></div>
                 <div class="title-composition"><span class="eyebrow">PERJALANAN MENJAGA NUSANTARA</span><h1>PETUALANG<br/><em>AIR</em></h1><p>Dari hulu yang sunyi hingga samudra tak bertepi.<br/>Temukan cerita. Jaga kehidupan. Terus berlayar.</p></div>
                 <nav class="title-navigation" aria-label="Navigasi utama">
-                    <button class="title-primary" @onclick="CloseMenu"><span>Lanjutkan ekspedisi</span><span class="arrow-disc">?</span></button>
+                    <button class="title-primary" @onclick="CloseMenu"><span>Lanjutkan ekspedisi</span><span class="arrow-disc">&#8594;</span></button>
                     <button @onclick='() => OpenMenu("new-game")'><span>Ekspedisi baru</span><span>01</span></button>
                     <button @onclick='() => OpenMenu("settings")'><span>Options</span><span>02</span></button>
                     <button @onclick='() => OpenMenu("missions")'><span>Jurnal perjalanan</span><span>03</span></button>
                     <button @onclick='() => OpenMenu("credits")'><span>Credits</span><span>04</span></button>
                     <button @onclick="QuitGame"><span>Keluar dari game</span><span>05</span></button>
                 </nav>
-                <footer class="title-footer"><span>Ariana Mischa Fadhila<br/><b>Syubadubin Studios</b></span><span>WINDOWS EDITION<br/><b>v1.0.0 ? @GameState.Quality.ToUpperInvariant()</b></span></footer>
+                <footer class="title-footer"><span>Ariana Mischa Fadhila<br/><b>Syubadubin Studios</b></span><span>WINDOWS EDITION<br/><b>v1.0.0 &middot; @GameState.Quality.ToUpperInvariant()</b></span></footer>
             </section>
             <div class="title-location"><span class="coordinate-line"></span><span>@GameStateService.BiomeNames[(int)GameState.BiomaAktif]<small>@GameState.CompletedCount dari 12 kisah terselesaikan</small></span></div>
         </div>
@@ -91,11 +91,11 @@
                     <div class="credit-block"><small>DIBUAT OLEH</small><p>Ariana Mischa Fadhila</p></div>
                     <div class="credit-block"><small>GAME</small><p>Petualang Air</p><span>Ekspedisi Bang Jopi di Perairan Nusantara</span></div>
                     <div class="credit-block"><small>ORIGINAL SOUNDTRACK</small><p>Jejak Air</p><p>Senja Danau</p><p>Layar Samudra</p><span>Komposisi sintetis orisinal untuk Petualang Air</span></div>
-                    <div class="credit-block"><small>MODELS & ANIMATION</small><p>Bang Jopi ? Rakit Nusantara</p><p>Klotok ? Rumah Adat ? Karang</p><span>Aset lokal dengan sumber Blender yang disertakan</span></div>
-                    <div class="credit-block"><small>BUILT WITH</small><p>Blender ? Three.js</p><p>.NET ? WPF ? Blazor Hybrid</p><p>Microsoft Edge WebView2</p><span>Lisensi pihak ketiga disertakan bersama game.</span></div>
+                    <div class="credit-block"><small>MODELS & ANIMATION</small><p>Bang Jopi &middot; Rakit Nusantara</p><p>Klotok &middot; Rumah Adat &middot; Karang</p><span>Aset lokal dengan sumber Blender yang disertakan</span></div>
+                    <div class="credit-block"><small>BUILT WITH</small><p>Blender &middot; Three.js</p><p>.NET &middot; WPF &middot; Blazor Hybrid</p><p>Microsoft Edge WebView2</p><span>Lisensi pihak ketiga disertakan bersama game.</span></div>
                     <div class="credit-block"><small>INSPIRASI</small><p>Sungai, hutan, dan laut Indonesia.</p><p>Budaya yang hidup bersama air.</p></div>
                     <div class="credit-block credit-thanks"><small>UNTUK SETIAP PETUALANG</small><h3>Terima kasih<br/>telah menjaga air.</h3><p>Perjalananmu belum berakhir.</p></div>
-                    <div class="credit-block"><small>? 2026 SYUBADUBIN STUDIOS</small></div>
+                    <div class="credit-block"><small>&copy; 2026 SYUBADUBIN STUDIOS</small></div>
                 </div></div>
                 <div class="inline-actions"><button class="secondary-button" @onclick="() => creditsPaused = !creditsPaused">@(creditsPaused ? "Lanjutkan credits" : "Jeda credits")</button><button class="btn-upgrade" @onclick='() => OpenMenu("main")'>Menu utama</button></div>
             }
@@ -146,9 +146,9 @@
             {
                 <div class="options-layout">
                     <section class="option-section"><span class="eyebrow">01 / VISUAL</span><h3>Grafis & atmosfer</h3>
-                        <label>Preset kualitas<select value="@GameState.Quality" @onchange='e => SetOption("quality", e.Value)'><option value="low">Low ? performa</option><option value="medium">Medium ? seimbang</option><option value="high">High ? sinematik</option><option value="ultra">Ultra ? ambient occlusion</option></select></label>
+                        <label>Preset kualitas<select value="@GameState.Quality" @onchange='e => SetOption("quality", e.Value)'><option value="low">Low - performa</option><option value="medium">Medium - seimbang</option><option value="high">High - sinematik</option><option value="ultra">Ultra - ambient occlusion</option></select></label>
                         <p>Air berpantulan, sky scattering, vegetasi, bayangan dan bloom. Ultra menambah ambient occlusion dan memerlukan GPU lebih kuat.</p>
-                        <label>Bidang pandang <b>@GameState.FieldOfView?</b><input type="range" min="45" max="90" step="1" value="@GameState.FieldOfView" @onchange='e => SetOption("fov", e.Value)' /></label>
+                        <label>Bidang pandang <b>@GameState.FieldOfView&deg;</b><input type="range" min="45" max="90" step="1" value="@GameState.FieldOfView" @onchange='e => SetOption("fov", e.Value)' /></label>
                         <label>Eksposur <b>@GameState.Exposure.ToString("0.0", CultureInfo.InvariantCulture)</b><input type="range" min="0.6" max="1.6" step="0.1" value='@GameState.Exposure.ToString(CultureInfo.InvariantCulture)' @onchange='e => SetOption("exposure", e.Value)' /></label>
                         <label class="toggle-row"><span>Kurangi gerakan kamera & credits</span><input type="checkbox" checked="@GameState.ReducedMotion" @onchange='e => SetOption("motion", e.Value)' /></label>
                         <label class="toggle-row"><span>Tampilkan HUD saat bermain</span><input type="checkbox" checked="@GameState.ShowHud" @onchange='e => SetOption("hud", e.Value)' /></label>

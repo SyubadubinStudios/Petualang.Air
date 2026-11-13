@@ -25,6 +25,22 @@ function cloneAsset(assets, name) {
     clone.traverse(o => { if (o.isMesh) { o.geometry = o.geometry.clone(); o.material = o.material.clone(); o.castShadow = true; o.receiveShadow = true; } });
     return clone;
 }
+function island(parent, x, z, width, height, color) {
+    const geometry = new THREE.PlaneGeometry(width * 2, width * 2, 32, 32); geometry.rotateX(-Math.PI/2);
+    const p=geometry.attributes.position, colors=[];
+    for(let i=0;i<p.count;i++) {
+        const px=p.getX(i),pz=p.getZ(i),radius=Math.hypot(px/width,pz/width);
+        const falloff=Math.pow(Math.max(0,1-radius*radius),1.7);
+        const ridge=1+.22*Math.sin(px*.6+pz*.35)+.12*Math.cos(pz*1.1-px*.25)+.06*Math.sin(px*2.7);
+        const y=falloff*height*ridge-.7;p.setY(i,y);
+        const c=new THREE.Color(y<.6?0xb4a07b:color);
+        c.multiplyScalar(.75+.25*Math.sin(px*.5+pz*.6)**2);
+        if(y>height*.55)c.lerp(new THREE.Color(0x707568),.4);
+        colors.push(c.r,c.g,c.b);
+    }
+    geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geometry.computeVertexNormals();
+    const terrain=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial({vertexColors:true,roughness:.98}));terrain.position.set(x,0,z);terrain.castShadow=true;terrain.receiveShadow=true;parent.add(terrain);return terrain;
+}
 function tree(parent, x, z, mangrove = false) {
     const g = new THREE.Group(); g.position.set(x, 0, z); parent.add(g);
     cylinder(g, 0x765334, 0, 3, 0, .3, 6);
@@ -94,14 +110,14 @@ export class BiomeWorld {
         for (let i = 0; i < 18; i++) {
             const a = i / 18 * Math.PI * 2, x = Math.sin(a) * 83, z = Math.cos(a) * 83;
             if (b === 'SungaiGunung') {
-                sphere(this.root, 0x547d5d, x, 3, z, 11, 8 + i % 3 * 3, 10); tree(this.root, x, z);
+                island(this.root, x, z, 17, 12 + i % 3 * 5, 0x52674b); tree(this.root, x, z);
                 if (i % 2 === 0) this.obstacle(i % 4 ? 'log' : 'rock', Math.sin(a) * 37, Math.cos(a) * 37);
             } else if (b === 'HutanGambut') {
                 tree(this.root, x * .7, z * .7, true); tree(this.root, x, z, true);
                 if (i % 3 === 0) this.obstacle('root', x * .5, z * .5);
                 if (i % 6 === 0) this.obstacle('crocodile', x * .35, z * .35, 2);
             } else if (b === 'DanauVulkanik') {
-                const volcano = mesh(this.root, new THREE.ConeGeometry(13, 23 + i % 4 * 4, 32, 12), 0x56675e, x * 1.2, 8, z * 1.2);
+                island(this.root, x * 1.2, z * 1.2, 25, 30 + i % 4 * 5, 0x606d5a);
                 if (i % 4 === 0) this.addAsset('rumah-adat', x * .7, z * .7, 1.7);
                 if (i % 6 === 0) this.obstacle('whirlpool', x * .4, z * .4, 2.7);
             } else if (b === 'KotaKanal') {
@@ -110,7 +126,7 @@ export class BiomeWorld {
                 for (let j = 1; j < h; j += 2) box(this.root, 0xffd48a, x * .8, j, z * .8 - 4.55, 5, .65, .1);
                 if (i % 4 === 0) this.obstacle('klotok', x * .3, z * .3, 2.5);
             } else if (b === 'LautKarang') {
-                sphere(this.root, 0x6c9170, x, 4, z, 7, 11, 9); tree(this.root, x, z);
+                island(this.root, x, z, 12, 15, 0x6b8058); tree(this.root, x, z);
                 if (i % 2 === 0) this.obstacle('coral', x * .35, z * .35, 1.5);
                 if (i % 6 === 0) this.obstacle('jellyfish', x * .55, z * .55, 1.6);
                 const school = fish(this.root, [0xffc85b, 0x4ae0d0, 0xff875d][i % 3]); school.position.set(x * .45, -.2, z * .45); school.userData = { kind: 'fish', phase: a }; this.animated.push(school);

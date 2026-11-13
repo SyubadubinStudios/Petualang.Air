@@ -136,5 +136,28 @@ public class ExpeditionTests : IDisposable
         Assert.Equal(175, state.KoinNusantara);
         Assert.Contains("gagal disimpan", state.StatusSimpan);
     }
+    [Fact]
+    public void Options_ClampInvalidValues_AndRoundTrip()
+    {
+        var state = new GameStateService(SavePath);
+        state.SetOptions("ultra", 130, 10, .4, .2, 7, true, true, false);
+        var loaded = new GameStateService(SavePath);
+        Assert.Equal("ultra", loaded.Quality); Assert.Equal(90, loaded.FieldOfView);
+        Assert.Equal(1.6, loaded.Exposure); Assert.Equal(.4, loaded.MusicVolume); Assert.Equal(.2, loaded.EffectsVolume);
+        Assert.Equal(2, loaded.CameraSensitivity); Assert.True(loaded.ReducedMotion); Assert.True(loaded.InvertY); Assert.False(loaded.ShowHud);
+        loaded.SetOptions("unknown", 0, double.NaN, double.NaN, 99, double.PositiveInfinity, false, false, true);
+        Assert.Equal("high", loaded.Quality); Assert.Equal(45, loaded.FieldOfView); Assert.Equal(1.1, loaded.Exposure); Assert.Equal(1, loaded.EffectsVolume);
+    }
+    [Fact]
+    public void NewExpedition_PreservesBackupAndPreferences_ButResetsProgress()
+    {
+        var state = new GameStateService(SavePath); Collect(state, ResourceType.Coin, 6);
+        state.SetOptions("medium", 65, 1.2, .5, .8, 1.1, true, false, true);
+        var prior = File.ReadAllText(SavePath);
+        Assert.True(state.NewExpedition());
+        Assert.Equal(prior, File.ReadAllText(SavePath + ".previous"));
+        Assert.Equal(150, state.KoinNusantara); Assert.Equal(0, state.CompletedCount); Assert.Equal(0, state.UnlockedBiome);
+        Assert.Equal("medium", state.Quality); Assert.True(state.ReducedMotion);
+    }
     public void Dispose() { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
 }

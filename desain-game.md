@@ -902,3 +902,7 @@ window.PetualangEngine = new PetualangEngineClass();
 3. **Sistem Save/Load Lokal WPF:** Simpan progres `GameStateService` ke `%AppData%/PetualangAir/save.json` menggunakan `System.Text.Json`.
 4. **Dukungan Gamepad / Controller:** Gunakan Web Gamepad API atau `SharpDX.XInput` agar sensasi mendayung terasa makin seru.
 ````
+
+## Implementasi Aktif
+
+Solusi aktif berada di `PetualangAir.Wpf/`. Seluruh kategori fitur lanjutan telah terhubung ke permainan: 12 misi, barter, reputasi, progres bioma, lingkungan khas, GLB skeletal, soundtrack adaptif, cuaca, dan gamepad. Menu utama, options grafis/audio/kamera, scrolling credits, serta pipeline installer GitHub ditambahkan pada implementasi. Starter code di atas dipertahankan sebagai rancangan awal. Lihat `README.md` dan `docs/` untuk aturan terbaru, screenshot, pengujian, serta cara rilis.

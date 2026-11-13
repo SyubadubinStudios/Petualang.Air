@@ -34,7 +34,7 @@ def screenshot(name):
     data=call('Page.captureScreenshot',{'format':'png'});(OUT/name).write_bytes(base64.b64decode(data['data']))
 call('Runtime.enable');call('Log.enable')
 check('GLB skeleton and all four clips loaded', 'Object.keys(PetualangEngine.actions).length===4 && PetualangEngine.jopiGroup.getObjectByProperty("isSkinnedMesh",true)!==undefined')
-click('Mulai berlayar')
+evaluate('document.querySelector(".title-primary").click()');time.sleep(.4)
 evaluate('PetualangEngine.setPaused(true)')
 check('new save locks later biomes','document.querySelectorAll(".btn-biome")[1].innerText.includes("Kunci")')
 # Exercise the real collision/pickup path and the .NET mission callback.
@@ -58,7 +58,7 @@ for index,biome in enumerate(biomes):
         evaluate("PetualangEngine.emit('OnAction','market','')");time.sleep(.2)
         evaluate('document.querySelector(".raft-upgrade button").click()');time.sleep(.3)
         click('Lanjutkan [Esc]');evaluate('PetualangEngine.setPaused(true)')
-    evaluate('PetualangEngine.updateWater();PetualangEngine.renderer.render(PetualangEngine.scene,PetualangEngine.camera)')
+    evaluate('PetualangEngine.updateWater();PetualangEngine.graphics.render(.016)')
     screenshot(f'biome-{biome}.png')
 # Complete the storm mission through the actual weather transition.
 evaluate('''(async()=>{const e=PetualangEngine;e.raftState.x=55;e.raftState.z=10;e.docked=false;e.weather.time=104.99;e.weather.phase='Badai';e.stormExposure=49;e.simulate(.03,{forward:0,turn:0,boost:false,cameraX:0,cameraY:0});await e.eventQueue;})()''')

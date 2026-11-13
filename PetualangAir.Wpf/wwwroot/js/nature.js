@@ -40,7 +40,7 @@ export class NaturalDetails {
                 const x=vertices.getX(j),y=vertices.getY(j),z=vertices.getZ(j),n=1+.10*Math.sin(x*8+z*4)*Math.cos(y*9)+.06*Math.sin(z*15+x*3);
                 vertices.setXYZ(j,x*n,y*n,z*n);
             }
-            geometry.computeVertexNormals(); const rock=new THREE.Mesh(geometry,rockMat.clone());const a=i*2.399;
+            geometry.computeVertexNormals(); const rock=new THREE.Mesh(geometry,rockMat.clone());rock.material.onBeforeCompile=rockMat.onBeforeCompile;const a=i*2.399;
             rock.position.set(Math.sin(a)*73,1.5,Math.cos(a)*73);rock.scale.set(3+i%3,2+i%4,4);rock.rotation.y=a;rock.castShadow=true;rock.receiveShadow=true;this.root.add(rock);
         }
         rockMat.dispose();

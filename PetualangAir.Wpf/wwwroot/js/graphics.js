@@ -19,8 +19,8 @@ function normalTexture(size = 256) {
     const data = new Uint8Array(size * size * 4);
     for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
         const u = x / size * Math.PI * 2, v = y / size * Math.PI * 2;
-        const dx = Math.cos(u * 7 + Math.sin(v * 3)) * .35 + Math.cos(u * 13 - v * 9) * .18;
-        const dy = Math.sin(v * 9 + Math.cos(u * 5)) * .35 + Math.sin(v * 17 + u * 11) * .18;
+        const dx = Math.cos(u * 7 + Math.sin(v * 3)) * .18 + Math.cos(u * 13 - v * 9) * .10;
+        const dy = Math.sin(v * 9 + Math.cos(u * 5)) * .18 + Math.sin(v * 17 + u * 11) * .10;
         const n = new THREE.Vector3(dx, dy, 1).normalize(), i = (y * size + x) * 4;
         data[i] = (n.x * .5 + .5) * 255; data[i + 1] = (n.y * .5 + .5) * 255; data[i + 2] = n.z * 255; data[i + 3] = 255;
     }
@@ -92,7 +92,7 @@ export class CinematicGraphics {
         this.water.position.set(raft.x, 0, raft.z); const pos = this.waterGeometry.attributes.position;
         for (let i = 0; i < pos.count; i++) pos.setZ(i, wave(this.waterBase[i * 3] + raft.x, -this.waterBase[i * 3 + 1] + raft.z));
         pos.needsUpdate = true;
-        const u = this.water.material.uniforms; u.time.value = time * .65; u.size.value = 1.5; u.distortionScale.value = 1.8 + weather.strength * 3;
+        const u = this.water.material.uniforms; u.time.value = time * .65; u.size.value = 5; u.distortionScale.value = .8 + weather.strength * 2;
         u.waterColor.value.setHex(config.waterColor).multiplyScalar(weather.phase === 'Malam' ? .25 : 1);
         u.sunColor.value.setHex(weather.phase === 'Malam' ? 0x759abe : 0xffe1ae).multiplyScalar(1 - weather.strength * .65);
         this.sky.material.uniforms.turbidity.value = 5 + weather.strength * 15;
