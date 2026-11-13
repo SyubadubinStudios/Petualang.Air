@@ -1,0 +1,25 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <meta name="author" content="Ariana Mischa Fadhila dari Syubadubin Studios" />
+    <title>Petualang Air</title>
+    <link href="css/app.css" rel="stylesheet" />
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "./vendor/three/three.module.js",
+            "three/addons/": "./vendor/three/addons/"
+        }
+    }
+    </script>
+</head>
+<body>
+    <div id="app">Memuat Perairan Nusantara...</div>
+    <script>window.startGame = async (...args) => { await import("./js/petualangEngine.js"); await window.PetualangEngine.init(...args); };</script>
+    <script src="_framework/blazor.webview.js"></script>
+</body>
+</html>
+

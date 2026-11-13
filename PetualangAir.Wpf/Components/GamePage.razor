@@ -1,0 +1,303 @@
+﻿@using PetualangAir.Wpf.Services
+@using System.Globalization
+@inject IJSRuntime JS
+@inject GameStateService GameState
+@implements IAsyncDisposable
+
+<div class="game-container @((menu is "main" or "welcome" or "credits") || !GameState.ShowHud ? "hide-hud" : "")">
+    <canvas id="petualang-canvas" aria-label="Dunia Petualang Air. W A S D untuk mendayung, E untuk pasar, Escape untuk jeda."></canvas>
+    <div class="hud-top">
+        <div class="glass-panel player-card">
+            <div class="avatar-badge">BJ</div>
+            <div class="stats">
+                <div class="player-name">Bang Jopi <span class="badge-lvl">Rakit Lv.@GameState.LevelRakit</span></div>
+                <div class="bar-group"><label>Rakit</label><progress max="100" value="@GameState.KetahananRakit" aria-label="Ketahanan rakit"></progress><small>@GameState.KetahananRakit</small></div>
+                <div class="bar-group"><label>Stamina</label><progress max="100" value="@GameState.StaminaJopi" aria-label="Stamina"></progress><small>@GameState.StaminaJopi</small></div>
+            </div>
+        </div>
+        <div class="glass-panel biome-switcher">
+            <span class="biome-title">PETA PERAIRAN NUSANTARA</span>
+            <div class="biome-buttons">
+                @foreach (var bioma in Enum.GetValues<BiomaType>())
+                {
+                    <button class="btn-biome @(GameState.BiomaAktif == bioma ? "active" : "")" disabled="@(!ready)" title="@(GameState.IsUnlocked(bioma) ? GameStateService.BiomeNames[(int)bioma] : GameState.UnlockRequirement(bioma))" @onclick="() => GantiBioma(bioma)">
+                        @(GameState.IsUnlocked(bioma) ? "" : "[Kunci] ")@ShortBiome(bioma)
+                    </button>
+                }
+            </div>
+        </div>
+        <div class="glass-panel resource-panel"><h1>Petualang Air</h1><div class="coin-display">@GameState.KoinNusantara koin</div><small>Reputasi @GameState.Reputasi</small></div>
+    </div>
+
+    <aside class="glass-panel mission-tracker">
+        <div class="eyebrow">EKSPEDISI @(GameState.CompletedCount)/12</div>
+        @foreach (var mission in GameStateService.Missions.Where(m => m.Bioma == GameState.BiomaAktif))
+        {
+            <div class="tracked-mission"><strong>@(GameState.IsCompleted(mission) ? "Selesai - " : "")@mission.Title</strong><p>@mission.Description</p><progress max="@mission.Target" value="@GameState.Progress(mission)"></progress><small>@GameState.Progress(mission)/@mission.Target</small></div>
+        }
+        <button class="text-button" disabled="@(!ready)" @onclick='() => OpenMenu("missions")'>Lihat jurnal misi [M]</button>
+    </aside>
+    <div class="glass-panel voyage-status"><span>@weather</span><span>Dermaga @dockDistance</span><span>Lestari @GameState.SungaiLestari%</span>
+        @if (GameState.Has("compass")) { <span>Angin @wind | Koleksi @nearest</span> }
+    </div>
+
+    @if (!string.IsNullOrEmpty(toast)) { <div class="toast-banner" role="status">@toast</div> }
+    @if (!ready && string.IsNullOrEmpty(error)) { <div class="loading-panel">Menyiapkan perairan, karakter, dan suara Nusantara...</div> }
+    @if (!string.IsNullOrEmpty(error)) { <div class="rescue-overlay"><div class="glass-panel rescue-card"><h2>Game belum dapat dimuat</h2><p>@error</p></div></div> }
+
+    @if (GameState.KetahananRakit == 0 && ready)
+    {
+        <div class="rescue-overlay"><section class="dialog rescue-card" role="dialog" aria-modal="true" aria-label="Penyelamatan"><h2>Tim dermaga menjemput Bang Jopi</h2><p>Progres misi dan inventaris tetap aman. Rakit diperbaiki gratis; tantangan badai harus diulang.</p><button class="btn-upgrade" @onclick="Pulihkan">Kembali berlayar</button></section></div>
+    }
+    else if (menu is "main" or "welcome")
+    {
+        <div class="title-screen">
+            <div class="title-vignette"></div>
+            <section class="dialog main-menu" role="dialog" aria-modal="true" aria-label="Menu utama">
+                <div class="studio-mark"><span class="studio-emblem">S</span> SYUBADUBIN STUDIOS <span class="edition">AN ORIGINAL EXPEDITION</span></div>
+                <div class="title-composition"><span class="eyebrow">PERJALANAN MENJAGA NUSANTARA</span><h1>PETUALANG<br/><em>AIR</em></h1><p>Dari hulu yang sunyi hingga samudra tak bertepi.<br/>Temukan cerita. Jaga kehidupan. Terus berlayar.</p></div>
+                <nav class="title-navigation" aria-label="Navigasi utama">
+                    <button class="title-primary" @onclick="CloseMenu"><span>Lanjutkan ekspedisi</span><span class="arrow-disc">?</span></button>
+                    <button @onclick='() => OpenMenu("new-game")'><span>Ekspedisi baru</span><span>01</span></button>
+                    <button @onclick='() => OpenMenu("settings")'><span>Options</span><span>02</span></button>
+                    <button @onclick='() => OpenMenu("missions")'><span>Jurnal perjalanan</span><span>03</span></button>
+                    <button @onclick='() => OpenMenu("credits")'><span>Credits</span><span>04</span></button>
+                    <button @onclick="QuitGame"><span>Keluar dari game</span><span>05</span></button>
+                </nav>
+                <footer class="title-footer"><span>Ariana Mischa Fadhila<br/><b>Syubadubin Studios</b></span><span>WINDOWS EDITION<br/><b>v1.0.0 ? @GameState.Quality.ToUpperInvariant()</b></span></footer>
+            </section>
+            <div class="title-location"><span class="coordinate-line"></span><span>@GameStateService.BiomeNames[(int)GameState.BiomaAktif]<small>@GameState.CompletedCount dari 12 kisah terselesaikan</small></span></div>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(menu))
+    {
+        <div class="menu-overlay"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="menu-title">
+            <header class="dialog-header"><div><span class="eyebrow">SYUBADUBIN STUDIOS / PETUALANG AIR</span><h2 id="menu-title">@MenuTitle</h2></div><button class="close-button" aria-label="Tutup dan lanjutkan" @onclick="CloseMenu">Lanjutkan [Esc]</button></header>
+            <nav class="menu-tabs" aria-label="Menu permainan">
+                <button class="@(menu == "missions" ? "selected" : "")" @onclick='() => OpenMenu("missions")'>Misi</button>
+                <button class="@(menu == "market" ? "selected" : "")" @onclick='() => OpenMenu("market")'>Pasar & bengkel</button>
+                <button class="@(menu == "journal" ? "selected" : "")" @onclick='() => OpenMenu("journal")'>Koleksi budaya</button>
+                <button class="@(menu == "settings" ? "selected" : "")" @onclick='() => OpenMenu("settings")'>Pengaturan</button>
+            </nav>
+            <div class="dialog-content">
+            @if (menu == "new-game")
+            {
+                <div class="intro"><span class="eyebrow">AWAL PERJALANAN BARU</span><h3>Kembali ke hulu.</h3><p>Ekspedisi aktif akan direset. Progres sebelumnya dicadangkan ke save.json.previous. Pengaturan grafis, suara, dan kamera tetap digunakan.</p><div class="inline-actions"><button class="btn-upgrade" @onclick="NewGame">Mulai ekspedisi baru</button><button class="secondary-button" @onclick='() => OpenMenu("main")'>Kembali</button></div></div>
+            }
+            else if (menu == "credits")
+            {
+                <div class="credits-window @(creditsPaused ? "credits-paused" : "")"><div class="credits-roll">
+                    <span class="eyebrow">SEBUAH PERJALANAN DARI</span><h3>Syubadubin<br/>Studios</h3>
+                    <div class="credit-block"><small>DIBUAT OLEH</small><p>Ariana Mischa Fadhila</p></div>
+                    <div class="credit-block"><small>GAME</small><p>Petualang Air</p><span>Ekspedisi Bang Jopi di Perairan Nusantara</span></div>
+                    <div class="credit-block"><small>ORIGINAL SOUNDTRACK</small><p>Jejak Air</p><p>Senja Danau</p><p>Layar Samudra</p><span>Komposisi sintetis orisinal untuk Petualang Air</span></div>
+                    <div class="credit-block"><small>MODELS & ANIMATION</small><p>Bang Jopi ? Rakit Nusantara</p><p>Klotok ? Rumah Adat ? Karang</p><span>Aset lokal dengan sumber Blender yang disertakan</span></div>
+                    <div class="credit-block"><small>BUILT WITH</small><p>Blender ? Three.js</p><p>.NET ? WPF ? Blazor Hybrid</p><p>Microsoft Edge WebView2</p><span>Lisensi pihak ketiga disertakan bersama game.</span></div>
+                    <div class="credit-block"><small>INSPIRASI</small><p>Sungai, hutan, dan laut Indonesia.</p><p>Budaya yang hidup bersama air.</p></div>
+                    <div class="credit-block credit-thanks"><small>UNTUK SETIAP PETUALANG</small><h3>Terima kasih<br/>telah menjaga air.</h3><p>Perjalananmu belum berakhir.</p></div>
+                    <div class="credit-block"><small>? 2026 SYUBADUBIN STUDIOS</small></div>
+                </div></div>
+                <div class="inline-actions"><button class="secondary-button" @onclick="() => creditsPaused = !creditsPaused">@(creditsPaused ? "Lanjutkan credits" : "Jeda credits")</button><button class="btn-upgrade" @onclick='() => OpenMenu("main")'>Menu utama</button></div>
+            }
+            else if (menu is "welcome" or "pause")
+            {
+                <div class="intro"><span class="eyebrow">EKSPEDISI BANG JOPI</span><h3>Enam perairan. Satu perjalanan menjaga Nusantara.</h3><p>Ikuti jejak koin di depan rakit untuk membuka Hutan Gambut. Kumpulkan ikan, sampah, mutiara, dan artefak; kembali ke dermaga untuk barter serta memasang perlengkapan.</p><div class="info-grid"><div><b>Jelajahi</b><p>WASD / stik kiri. Space / A untuk turbo. Mouse / stik kanan untuk kamera.</p></div><div><b>Rawat perairan</b><p>Sampah meningkatkan reputasi. Reputasi 40 membuka diskon pasar dan rompi batik.</p></div><div><b>Hadapi cuaca</b><p>Pelan di dekat buaya. Potong ombak badai secara diagonal. Ikuti lumba-lumba untuk dorongan.</p></div></div><button class="btn-upgrade" @onclick="CloseMenu">Mulai berlayar</button></div>
+                @if (menu == "pause") { <button class="secondary-button" @onclick="ReturnToDock">Kembali ke dermaga (tanpa memulihkan ketahanan)</button> }
+            }
+            else if (menu == "missions")
+            {
+                @if (GameState.ExpeditionComplete) { <div class="completion"><h3>Penjaga Perairan Nusantara</h3><p>Seluruh 12 misi selesai. Terima kasih telah menjaga air, budaya, dan kehidupan di dalamnya. Ekspedisi bebas tetap dapat dilanjutkan.</p></div> }
+                <div class="mission-grid">
+                @foreach (var mission in GameStateService.Missions)
+                {
+                    <article class="catalog-card @(GameState.IsCompleted(mission) ? "completed" : "")"><span class="eyebrow">@GameStateService.BiomeNames[(int)mission.Bioma]</span><h3>@mission.Title</h3><p>@mission.Description</p><progress max="@mission.Target" value="@GameState.Progress(mission)"></progress><small>@GameState.Progress(mission)/@mission.Target - @mission.Coins koin + @mission.Reputation reputasi</small><b>@(GameState.IsCompleted(mission) ? "Hadiah diterima" : GameState.IsUnlocked(mission.Bioma) ? "Misi aktif" : "Bioma terkunci")</b></article>
+                }
+                </div>
+            }
+            else if (menu == "market")
+            {
+                <div class="market-summary"><b>@GameState.KoinNusantara koin</b><span>Ikan @GameState.Count("Fish")</span><span>Sampah @GameState.Count("Trash")</span><span>Mutiara @GameState.Count("Pearl")</span><span>Diskon @(GameState.Reputasi >= 40 ? "20%" : "0%")</span></div>
+                @if (!GameState.IsDocked) { <p class="notice">Pasar tersedia saat rakit berada di dekat dermaga. Tutup menu dan ikuti penanda dermaga, atau gunakan tombol kembali.</p><button class="secondary-button" @onclick="ReturnToDock">Kembali ke dermaga</button> }
+                <div class="catalog-card raft-upgrade"><h3>@RaftName</h3><p>Upgrade meningkatkan kecepatan dan memulihkan rakit. Level 2: pelampung drum + dayung ganda; level 3: katamaran ulin + ketinting; level 4: pinisi + layar tenun dan panel surya.</p><button class="btn-upgrade" disabled="@(GameState.LevelRakit >= 4 || GameState.KoinNusantara < GameState.LevelRakit * 100)" @onclick="BeliUpgrade">@(GameState.LevelRakit >= 4 ? "Level maksimal" : $"Upgrade - {GameState.LevelRakit * 100} koin")</button></div>
+                <div class="mission-grid">
+                @foreach (var item in GameStateService.Market)
+                {
+                    <article class="catalog-card"><h3>@item.Name</h3><p>@item.Description</p><small>@GameState.Price(item) koin @(item.CostResource is null ? "" : $"+ {item.CostCount} {ResourceName(item.CostResource.Value)}")</small><button class="btn-upgrade" disabled="@(!CanBuy(item))" @onclick="() => Buy(item.Id)">@(item.Unique && GameState.Has(item.Id) ? "Terpasang" : "Beli / barter")</button></article>
+                }
+                </div>
+                <h3>Jual hasil ekspedisi</h3><div class="inline-actions">
+                @foreach (var type in new[] { ResourceType.Fish, ResourceType.Trash, ResourceType.Pearl })
+                {
+                    <button disabled="@(!GameState.IsDocked || GameState.Count(type.ToString()) == 0)" @onclick="() => Sell(type)">@ResourceName(type) - @(type == ResourceType.Fish ? 18 : type == ResourceType.Trash ? 8 : 45) koin / unit</button>
+                }
+                </div>
+                @if (GameState.Has("batik")) { <button class="secondary-button" @onclick="ToggleBatik">Rompi Batik: @(GameState.BatikAktif ? "Aktif" : "Nonaktif")</button> }
+            }
+            else if (menu == "journal")
+            {
+                <p>Temukan kristal ungu (artefak) di setiap perairan untuk membuka catatan perjalanan. Catatan ini merupakan narasi game yang terinspirasi budaya Nusantara.</p><div class="mission-grid">
+                @for (int i = 0; i < 6; i++)
+                {
+                    <article class="catalog-card"><span class="eyebrow">@GameStateService.BiomeNames[i]</span><h3>@(GameState.Journal.Contains(i) ? "Artefak ditemukan" : "Catatan belum ditemukan")</h3><p>@(GameState.Journal.Contains(i) ? GameStateService.ArtifactStories[i] : "Jelajahi bioma ini dan dekati artefak ungu untuk membuka cerita.")</p></article>
+                }
+                </div>
+            }
+            else if (menu == "settings")
+            {
+                <div class="options-layout">
+                    <section class="option-section"><span class="eyebrow">01 / VISUAL</span><h3>Grafis & atmosfer</h3>
+                        <label>Preset kualitas<select value="@GameState.Quality" @onchange='e => SetOption("quality", e.Value)'><option value="low">Low ? performa</option><option value="medium">Medium ? seimbang</option><option value="high">High ? sinematik</option><option value="ultra">Ultra ? ambient occlusion</option></select></label>
+                        <p>Air berpantulan, sky scattering, vegetasi, bayangan dan bloom. Ultra menambah ambient occlusion dan memerlukan GPU lebih kuat.</p>
+                        <label>Bidang pandang <b>@GameState.FieldOfView?</b><input type="range" min="45" max="90" step="1" value="@GameState.FieldOfView" @onchange='e => SetOption("fov", e.Value)' /></label>
+                        <label>Eksposur <b>@GameState.Exposure.ToString("0.0", CultureInfo.InvariantCulture)</b><input type="range" min="0.6" max="1.6" step="0.1" value='@GameState.Exposure.ToString(CultureInfo.InvariantCulture)' @onchange='e => SetOption("exposure", e.Value)' /></label>
+                        <label class="toggle-row"><span>Kurangi gerakan kamera & credits</span><input type="checkbox" checked="@GameState.ReducedMotion" @onchange='e => SetOption("motion", e.Value)' /></label>
+                        <label class="toggle-row"><span>Tampilkan HUD saat bermain</span><input type="checkbox" checked="@GameState.ShowHud" @onchange='e => SetOption("hud", e.Value)' /></label>
+                    </section>
+                    <section class="option-section"><span class="eyebrow">02 / AUDIO</span><h3>Suara perjalanan</h3>
+                        <label>Volume utama <b>@((int)(GameState.Volume * 100))%</b><input id="volume" type="range" min="0" max="1" step="0.05" value='@GameState.Volume.ToString(CultureInfo.InvariantCulture)' @onchange="ChangeVolume" /></label>
+                        <label>Musik latar <b>@((int)(GameState.MusicVolume * 100))%</b><input type="range" min="0" max="1" step="0.05" value='@GameState.MusicVolume.ToString(CultureInfo.InvariantCulture)' @onchange='e => SetOption("music", e.Value)' /></label>
+                        <label>Efek & lingkungan <b>@((int)(GameState.EffectsVolume * 100))%</b><input type="range" min="0" max="1" step="0.05" value='@GameState.EffectsVolume.ToString(CultureInfo.InvariantCulture)' @onchange='e => SetOption("effects", e.Value)' /></label>
+                        <button class="secondary-button" @onclick="ToggleMute">@(GameState.Muted ? "Aktifkan suara" : "Bisukan semua suara")</button><p>Tiga komposisi orisinal bertransisi mengikuti bioma. Suara diaktifkan setelah klik atau input pertama; otomatis senyap saat jendela tidak aktif.</p>
+                    </section>
+                    <section class="option-section controls-section"><span class="eyebrow">03 / CONTROL</span><h3>Kamera & kontrol</h3><p>@controller</p>
+                        <label>Sensitivitas kamera gamepad <b>@GameState.CameraSensitivity.ToString("0.0", CultureInfo.InvariantCulture)?</b><input type="range" min="0.3" max="2" step="0.1" value='@GameState.CameraSensitivity.ToString(CultureInfo.InvariantCulture)' @onchange='e => SetOption("sensitivity", e.Value)' /></label>
+                        <label class="toggle-row"><span>Balik sumbu Y gamepad</span><input type="checkbox" checked="@GameState.InvertY" @onchange='e => SetOption("invert", e.Value)' /></label>
+                        <p><b>Keyboard:</b> WASD / panah: dayung. Space: turbo. E: pasar. M: misi. J: jurnal. 1 / 2: minuman. Escape: jeda. F11: layar penuh.</p>
+                        <p><b>Gamepad:</b> stik kiri: dayung; kanan: kamera; A: turbo; B: kelapa; X: pasar; Y: jurnal; LB/RB: bioma; Start: jeda. Menu: D-pad memilih, A mengaktifkan, B menutup.</p>
+                    </section>
+                </div>
+                <p class="credits">Dibuat oleh Ariana Mischa Fadhila dari Syubadubin Studios</p>
+            }
+            </div>
+            <footer class="dialog-footer"><span>@GameState.StatusSimpan</span><button class="text-button" @onclick='() => OpenMenu("main")'>Menu utama</button></footer>
+        </section></div>
+    }
+    <div class="hud-bottom"><div class="glass-panel controls-hint">
+        <span><b>WASD</b> Dayung <b>Space</b> Turbo</span>
+        <button disabled="@(!ready)" @onclick='() => OpenMenu("market")'>@(GameState.IsDocked ? "Pasar tersedia [E]" : "Pasar [E]")</button>
+        <button disabled='@(!ready || GameState.Count("coconut") == 0 || GameState.StaminaJopi == 100)' @onclick='() => Drink("coconut")'>Kelapa @GameState.Count("coconut") [1]</button>
+        <button disabled='@(!ready || GameState.Count("coffee") == 0 || GameState.StaminaJopi == 100)' @onclick='() => Drink("coffee")'>Kopi @GameState.Count("coffee") [2]</button>
+        <button disabled="@(!ready)" @onclick='() => OpenMenu("pause")'>Jeda [Esc]</button>
+    </div></div>
+    <div class="studio-credit">PETUALANG AIR | Dibuat oleh Ariana Mischa Fadhila dari Syubadubin Studios</div>
+</div>
+
+@code {
+    private DotNetObjectReference<GamePage>? reference;
+    private string menu = "", toast = "", error = "", weather = "Cerah", dockDistance = "0 m", wind = "0", nearest = "", controller = "Keyboard / mouse";
+    private bool ready, disposed, focusMenu, creditsPaused;
+    private readonly CancellationTokenSource lifetime = new();
+    private int toastVersion;
+    private string MenuTitle => menu switch { "market" => "Pasar Terapung & Dermaga Bengkel", "missions" => "Jurnal ekspedisi", "journal" => "Koleksi budaya Nusantara", "settings" => "Pengaturan perjalanan", "credits" => "The people & the journey", "new-game" => "Ekspedisi baru", "pause" => "Istirahat sejenak", _ => "Selamat datang, petualang" };
+    private string RaftName => new[] { "", "Bambu Ikat Ijuk", "Bambu Petung & Drum", "Katamaran Kayu Ulin", "Pinisi Tenun Surya" }[GameState.LevelRakit];
+    protected override void OnInitialized() => GameState.OnStateChanged += OnStateChanged;
+    private void OnStateChanged() { if (!disposed) _ = InvokeAsync(StateHasChanged); }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            reference = DotNetObjectReference.Create(this);
+            try
+            {
+                await JS.InvokeVoidAsync("startGame", "petualang-canvas", reference);
+                await JS.InvokeVoidAsync("PetualangEngine.setBiome", GameState.BiomaAktif.ToString());
+                await JS.InvokeVoidAsync("PetualangEngine.upgradeRaft", GameState.LevelRakit);
+                await JS.InvokeVoidAsync("PetualangEngine.setStamina", GameState.StaminaJopi);
+                await SyncEngine(); ready = true;
+                await OpenMenu("main");
+            }
+            catch (JSException ex)
+            {
+                error = "Pastikan WebView2, WebGL2, dan seluruh folder models/vendor tersedia. " + ex.Message.Split('\n')[0];
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        if (focusMenu) { focusMenu = false; await JS.InvokeVoidAsync("PetualangEngine.focusMenu"); }
+    }
+    private ValueTask SyncEngine() => JS.InvokeVoidAsync("PetualangEngine.configure", new { health = GameState.KetahananRakit, muted = GameState.Muted, volume = GameState.Volume, options = new { quality = GameState.Quality, fov = GameState.FieldOfView, exposure = GameState.Exposure, music = GameState.MusicVolume, effects = GameState.EffectsVolume, sensitivity = GameState.CameraSensitivity, reducedMotion = GameState.ReducedMotion, invertY = GameState.InvertY }, equipment = new { net = GameState.Has("net"), lamp = GameState.Has("lamp"), bumper = GameState.Has("bumper"), compass = GameState.Has("compass"), batik = GameState.BatikAktif } });
+    private async Task OpenMenu(string name)
+    {
+        if (!ready) return;
+        menu = name; focusMenu = true; creditsPaused = false; GameState.Save();
+        await JS.InvokeVoidAsync("PetualangEngine.setMenuMode", name);
+        await JS.InvokeVoidAsync("PetualangEngine.setPaused", true); await InvokeAsync(StateHasChanged);
+    }
+    private async Task CloseMenu() { menu = ""; await JS.InvokeVoidAsync("PetualangEngine.setMenuMode", ""); await JS.InvokeVoidAsync("PetualangEngine.setPaused", false); await InvokeAsync(StateHasChanged); }
+    private async Task GantiBioma(BiomaType biome)
+    {
+        if (!ready) return;
+        if (!GameState.SetBioma(biome)) { Notify(GameState.UnlockRequirement(biome)); return; }
+        await JS.InvokeVoidAsync("PetualangEngine.setBiome", biome.ToString()); Notify($"Memasuki {GameStateService.BiomeNames[(int)biome]}");
+    }
+    private async Task BeliUpgrade()
+    {
+        if (!GameState.UpgradeRakit()) return;
+        await JS.InvokeVoidAsync("PetualangEngine.upgradeRaft", GameState.LevelRakit); await SyncEngine(); Notify($"Rakit kini level {GameState.LevelRakit}. Periksa peta untuk bioma baru.");
+    }
+    private bool CanBuy(MarketItem item) => GameState.IsDocked && !(item.Unique && GameState.Has(item.Id)) && GameState.KoinNusantara >= GameState.Price(item) && (item.CostResource is null || GameState.Count(item.CostResource.ToString()!) >= item.CostCount) && (item.Id != "batik" || GameState.Reputasi >= 40);
+    private async Task Buy(string id) { if (GameState.Buy(id)) { await SyncEngine(); Notify("Transaksi berhasil. Perlengkapan langsung dipasang."); } }
+    private void Sell(ResourceType type) { if (GameState.Sell(type)) Notify("Hasil ekspedisi berhasil dijual."); }
+    private async Task Drink(string id) { if (GameState.UseDrink(id)) { await JS.InvokeVoidAsync("PetualangEngine.setStamina", GameState.StaminaJopi); Notify("Segar Nusantara! Stamina pulih."); } }
+    private async Task SetOption(string key, object? value)
+    {
+        double Number(double fallback) => double.TryParse(value?.ToString(), CultureInfo.InvariantCulture, out var n) ? n : fallback;
+        bool Flag() => value is bool b && b;
+        GameState.SetOptions(key == "quality" ? value?.ToString() ?? "high" : GameState.Quality,
+            key == "fov" ? (int)Number(58) : GameState.FieldOfView, key == "exposure" ? Number(1.1) : GameState.Exposure,
+            key == "music" ? Number(.65) : GameState.MusicVolume, key == "effects" ? Number(.8) : GameState.EffectsVolume,
+            key == "sensitivity" ? Number(1) : GameState.CameraSensitivity, key == "motion" ? Flag() : GameState.ReducedMotion,
+            key == "invert" ? Flag() : GameState.InvertY, key == "hud" ? Flag() : GameState.ShowHud);
+        await SyncEngine(); await JS.InvokeVoidAsync("PetualangEngine.setMenuMode", menu);
+    }
+    private async Task NewGame()
+    {
+        if (!GameState.NewExpedition()) { Notify(GameState.StatusSimpan); return; }
+        await JS.InvokeVoidAsync("PetualangEngine.setBiome", GameState.BiomaAktif.ToString());
+        await JS.InvokeVoidAsync("PetualangEngine.upgradeRaft", 1); await JS.InvokeVoidAsync("PetualangEngine.setStamina", 100); await SyncEngine(); await CloseMenu();
+    }
+    private void QuitGame() { GameState.Save(); System.Windows.Application.Current.MainWindow.Close(); }
+    private async Task ToggleBatik() { GameState.ToggleBatik(); await SyncEngine(); }
+    private async Task ToggleMute() { GameState.SetAudio(!GameState.Muted, GameState.Volume); await SyncEngine(); }
+    private async Task ChangeVolume(ChangeEventArgs e) { if (double.TryParse(e.Value?.ToString(), CultureInfo.InvariantCulture, out var value)) { GameState.SetAudio(GameState.Muted, value); await SyncEngine(); } }
+    private async Task ReturnToDock() { await JS.InvokeVoidAsync("PetualangEngine.returnToDock"); GameState.SetDocked(true); await CloseMenu(); }
+    private async Task Pulihkan() { GameState.PulihkanRakit(); menu = ""; await JS.InvokeVoidAsync("PetualangEngine.recover"); await SyncEngine(); }
+    [JSInvokable] public async Task OnResourceCollected(string type, string biome)
+    {
+        if (biome != GameState.BiomaAktif.ToString() || !Enum.TryParse<ResourceType>(type, out var resource)) return;
+        string reward = GameState.Collect(resource);
+        if (reward.Length > 0) Notify(reward);
+        else if (resource == ResourceType.Artifact) Notify("Artefak baru! Buka koleksi budaya [J].");
+        await InvokeAsync(StateHasChanged);
+    }
+    [JSInvokable] public async Task OnObstacleHit(int damage) { GameState.KenaRintangan(damage); await SyncEngine(); if (GameState.KetahananRakit == 0) { focusMenu = true; await JS.InvokeVoidAsync("PetualangEngine.setPaused", true); } }
+    [JSInvokable] public void OnStaminaChanged(int value) => GameState.SetStamina(value);
+    [JSInvokable] public void OnDockChanged(bool value) => GameState.SetDocked(value);
+    [JSInvokable] public void OnTelemetry(string phase, string distance, string direction, string target) { weather = phase; dockDistance = distance; wind = direction; nearest = target; OnStateChanged(); }
+    [JSInvokable] public async Task OnAction(string action, string value)
+    {
+        if (action == "fullscreen")
+        {
+            var window = System.Windows.Application.Current.MainWindow;
+            if (window.WindowStyle == System.Windows.WindowStyle.None) { window.WindowStyle = System.Windows.WindowStyle.SingleBorderWindow; window.WindowState = System.Windows.WindowState.Normal; }
+            else { window.WindowStyle = System.Windows.WindowStyle.None; window.WindowState = System.Windows.WindowState.Maximized; }
+            return;
+        }
+        if (action == "controller") { controller = value; OnStateChanged(); return; }
+        if (!ready) return;
+        if (action is "pause" or "close") { if (menu.Length > 0) await CloseMenu(); else await OpenMenu("pause"); }
+        else if (action == "blur") { if (menu.Length == 0) await OpenMenu("pause"); }
+        else if (action is "coconut" or "coffee") await Drink(action);
+        else if (action is "market" or "missions" or "journal") await OpenMenu(action);
+        else if (action is "nextBiome" or "previousBiome") { int next = ((int)GameState.BiomaAktif + (action == "nextBiome" ? 1 : 5)) % 6; await GantiBioma((BiomaType)next); }
+    }
+    private void Notify(string message) { toast = message; int version = ++toastVersion; _ = ClearToast(version); OnStateChanged(); }
+    private async Task ClearToast(int version) { try { await Task.Delay(4500, lifetime.Token); if (!disposed && version == toastVersion) { toast = ""; await InvokeAsync(StateHasChanged); } } catch (OperationCanceledException) { } }
+    private static string ShortBiome(BiomaType biome) => new[] { "Pegunungan", "Gambut", "Danau", "Kota", "Karang", "Samudra" }[(int)biome];
+    private static string ResourceName(ResourceType type) => type switch { ResourceType.Fish => "ikan", ResourceType.Trash => "sampah", ResourceType.Pearl => "mutiara", _ => type.ToString() };
+    public async ValueTask DisposeAsync()
+    {
+        disposed = true; lifetime.Cancel(); lifetime.Dispose(); GameState.OnStateChanged -= OnStateChanged; GameState.Save();
+        try { await JS.InvokeVoidAsync("PetualangEngine.dispose"); } catch (JSException) { }
+        reference?.Dispose();
+    }
+}

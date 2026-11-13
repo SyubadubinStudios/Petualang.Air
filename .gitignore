@@ -426,3 +426,11 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+
+# Petualang Air local development
+.claude/
+.mcp.json
+**/*.WebView2/
+artifacts/
+*.blend1
+
