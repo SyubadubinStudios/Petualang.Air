@@ -1,7 +1,10 @@
-﻿@using PetualangAir.Wpf.Services
+﻿@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@using PetualangAir.Wpf.Services
 @using System.Globalization
 @inject IJSRuntime JS
 @inject GameStateService GameState
+@inject IAppShell Shell
 @implements IAsyncDisposable
 
 <div class="game-container @((menu is "main" or "welcome" or "credits") || !GameState.ShowHud ? "hide-hud" : "")">
@@ -64,7 +67,7 @@
                     <button @onclick='() => OpenMenu("credits")'><span>Credits</span><span>04</span></button>
                     <button @onclick="QuitGame"><span>Keluar dari game</span><span>05</span></button>
                 </nav>
-                <footer class="title-footer"><span>Ariana Mischa Fadhila<br/><b>Syubadubin Studios</b></span><span>WINDOWS EDITION<br/><b>v1.0.0 &middot; @GameState.Quality.ToUpperInvariant()</b></span></footer>
+                <footer class="title-footer"><span>Ariana Mischa Fadhila<br/><b>Syubadubin Studios</b></span><span>@Shell.Edition<br/><b>v@(AppVersion) &middot; @GameState.Quality.ToUpperInvariant()</b></span></footer>
             </section>
             <div class="title-location"><span class="coordinate-line"></span><span>@GameStateService.BiomeNames[(int)GameState.BiomaAktif]<small>@GameState.CompletedCount dari 12 kisah terselesaikan</small></span></div>
         </div>
@@ -189,6 +192,7 @@
     private readonly CancellationTokenSource lifetime = new();
     private int toastVersion;
     private string MenuTitle => menu switch { "market" => "Pasar Terapung & Dermaga Bengkel", "missions" => "Jurnal ekspedisi", "journal" => "Koleksi budaya Nusantara", "settings" => "Pengaturan perjalanan", "credits" => "The people & the journey", "new-game" => "Ekspedisi baru", "pause" => "Istirahat sejenak", _ => "Selamat datang, petualang" };
+    private static readonly string AppVersion = typeof(GameStateService).Assembly.GetName().Version?.ToString(3) ?? "";
     private string RaftName => new[] { "", "Bambu Ikat Ijuk", "Bambu Petung & Drum", "Katamaran Kayu Ulin", "Pinisi Tenun Surya" }[GameState.LevelRakit];
     protected override void OnInitialized() => GameState.OnStateChanged += OnStateChanged;
     private void OnStateChanged() { if (!disposed) _ = InvokeAsync(StateHasChanged); }
@@ -208,7 +212,7 @@
             }
             catch (JSException ex)
             {
-                error = "Pastikan WebView2, WebGL2, dan seluruh folder models/vendor tersedia. " + ex.Message.Split('\n')[0];
+                error = "Pastikan WebGL2 dan seluruh folder models/vendor tersedia. " + ex.Message.Split('\n')[0];
                 await InvokeAsync(StateHasChanged);
             }
         }
@@ -255,7 +259,7 @@
         await JS.InvokeVoidAsync("PetualangEngine.setBiome", GameState.BiomaAktif.ToString());
         await JS.InvokeVoidAsync("PetualangEngine.upgradeRaft", 1); await JS.InvokeVoidAsync("PetualangEngine.setStamina", 100); await SyncEngine(); await CloseMenu();
     }
-    private void QuitGame() { GameState.Save(); System.Windows.Application.Current.MainWindow.Close(); }
+    private void QuitGame() { GameState.Save(); Shell.Quit(); }
     private async Task ToggleBatik() { GameState.ToggleBatik(); await SyncEngine(); }
     private async Task ToggleMute() { GameState.SetAudio(!GameState.Muted, GameState.Volume); await SyncEngine(); }
     private async Task ChangeVolume(ChangeEventArgs e) { if (double.TryParse(e.Value?.ToString(), CultureInfo.InvariantCulture, out var value)) { GameState.SetAudio(GameState.Muted, value); await SyncEngine(); } }
@@ -277,9 +281,7 @@
     {
         if (action == "fullscreen")
         {
-            var window = System.Windows.Application.Current.MainWindow;
-            if (window.WindowStyle == System.Windows.WindowStyle.None) { window.WindowStyle = System.Windows.WindowStyle.SingleBorderWindow; window.WindowState = System.Windows.WindowState.Normal; }
-            else { window.WindowStyle = System.Windows.WindowStyle.None; window.WindowState = System.Windows.WindowState.Maximized; }
+            Shell.ToggleFullscreen();
             return;
         }
         if (action == "controller") { controller = value; OnStateChanged(); return; }

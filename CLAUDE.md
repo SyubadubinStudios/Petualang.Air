@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Petualang Air is a Windows rafting/exploration game: a WPF window hosting a Blazor WebView (WebView2) whose Razor UI drives a Three.js engine. User-facing text, docs (`README.md`, `docs/`, `desain-game.md`), and domain identifiers are in Indonesian — keep names such as `KoinNusantara`, `LevelRakit`, `BiomaType.HutanGambut` as they are.
+Petualang Air is a rafting/exploration game whose Razor UI drives a Three.js engine. On Windows it runs in a WPF window hosting a Blazor WebView (WebView2); on Linux and macOS the same UI and domain code run as Blazor WebAssembly inside Electron. User-facing text, docs (`README.md`, `docs/`, `desain-game.md`), and domain identifiers are in Indonesian — keep names such as `KoinNusantara`, `LevelRakit`, `BiomaType.HutanGambut` as they are.
 
 `AGENTS.md` predates the implementation (it describes a design-stage repo targeting .NET 8 with no tests). Its style rules still apply, but `docs/ARCHITECTURE.md` and this file describe the actual structure.
 
@@ -18,6 +18,16 @@ dotnet build PetualangAir.sln -c Release
 dotnet test PetualangAir.sln -c Release          # xUnit domain tests
 npm test                                         # node --test tools/*.test.mjs
 ./tools/build-release.ps1 -Version 1.0.0         # tests + self-contained publish + Inno Setup installer + portable zip
+```
+
+Linux/macOS host (Node.js 22+; also runs on Windows for testing), from `desktop/`:
+
+```bash
+npm ci
+npm run build:web      # dotnet publish PetualangAir.Web -> desktop/build/web
+npm start              # run in Electron
+npm run smoke          # automated host check against a throwaway save
+npm run dist -- --linux   # or: --mac --x64 --arm64 (macOS only)
 ```
 
 Single tests:
@@ -53,6 +63,14 @@ Three layers, each owning one concern:
 - **C# domain + UI** (`Services/GameStateService.cs`, `Components/GamePage.razor`): `GameStateService` is the single source of truth for the mission catalog, market, prices, barter costs, unlock rules, options, save/migration. `GamePage.razor` is the only component: main menu, HUD, market, journal, options, credits, and all JS interop.
 - **JS engine** (`wwwroot/js/`): `petualangEngine.js` owns the render/simulation loop, buoyancy, camera, and lifecycle, exposed as `window.PetualangEngine`. It composes `world.js`/`nature.js` (biomes, GLB assets, obstacles, collectibles), `graphics.js` (sky, water, post-processing, quality presets), `weather.js` + `weatherRules.js`, `input.js` (keyboard/gamepad/menu navigation), and `audio.js`.
 
+### Second host: `PetualangAir.Web` + `desktop/`
+
+- `PetualangAir.Web` (Blazor WebAssembly) links `Components/*.razor` and `Services/*.cs` from `PetualangAir.Wpf` and copies the shared `wwwroot` assets at publish; only its `index.html`, `shell.js`, and host classes are its own. A change to `GamePage.razor` or anything under `Services/` therefore ships on all three platforms and must compile for plain `net10.0`.
+- Components must not call WPF APIs. Window operations go through `IAppShell` (`WpfShell` / `BrowserShell`).
+- WebAssembly file I/O is in-memory, so `SaveMirror` seeds the files before `GameStateService` is created and writes changed files back through `window.petualangShell` to Electron (`preload.cjs` to `main.cjs`, atomic write to `<appData>/PetualangAir/save.json`).
+- Electron serves the publish output from a private `app://petualang` origin with `contextIsolation` and `sandbox` on; keep the preload surface limited to the two save files, quit, and fullscreen.
+- Adding a new shared asset type means adding its MIME type to `contentTypes` in `desktop/main.cjs`.
+
 ### Interop contract
 
 - C# → JS: `GamePage` calls `startGame` (lazy-imports the engine module) and then `PetualangEngine.*` methods (`configure`, `setBiome`, `upgradeRaft`, `setStamina`, `setPaused`, `setMenuMode`, …). `SyncEngine()` pushes health/audio/options in one `configure` call.
@@ -79,4 +97,4 @@ Three layers, each owning one concern:
 
 ## Release
 
-`.github/workflows/release.yml` builds the installer, portable zip, and `SHA256SUMS.txt` on pushes to `main`/`feat/**`, PRs to `main`, and manual dispatch; only pushing a `vMAJOR.MINOR.PATCH` tag publishes a GitHub Release. Actions are pinned to commit SHAs, and `build-release.ps1` pins the Inno Setup 6.4.3 compiler by SHA-256 and checks the WebView2 bootstrapper's Authenticode signature — keep those verifications when touching the pipeline. Details are in `docs/RELEASE.md`.
+`.github/workflows/release.yml` builds the Windows installer and portable zip, the Linux AppImage/tar.gz, and the macOS dmg/zip (after running the Electron smoke test on those runners), with per-platform checksum files, on pushes to `main`/`feat/**`, PRs to `main`, and manual dispatch; only pushing a `vMAJOR.MINOR.PATCH` tag publishes a GitHub Release. Actions are pinned to commit SHAs, and `build-release.ps1` pins the Inno Setup 6.4.3 compiler by SHA-256 and checks the WebView2 bootstrapper's Authenticode signature — keep those verifications when touching the pipeline. Details are in `docs/RELEASE.md`.
