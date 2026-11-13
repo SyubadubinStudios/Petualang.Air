@@ -3,6 +3,7 @@
     [switch]$SkipTests
 )
 $ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 Push-Location -LiteralPath $repoRoot
 try {
@@ -22,8 +23,8 @@ try {
         if (-not (Test-Path -LiteralPath (Join-Path $publishDir $asset))) { throw "Missing published asset: $asset" }
     }
     $bootstrapper = Join-Path $dependencyDir 'MicrosoftEdgeWebview2Setup.exe'
-    if (-not (Test-Path -LiteralPath $bootstrapper)) {
-        Invoke-WebRequest -Uri 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' -OutFile $bootstrapper -UseBasicParsing
+    if (-not (Test-Path -LiteralPath $bootstrapper) -or (Get-Item -LiteralPath $bootstrapper).Length -eq 0) {
+        Invoke-WebRequest -Uri 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' -OutFile $bootstrapper -UseBasicParsing -TimeoutSec 120
     }
     $signature = Get-AuthenticodeSignature -LiteralPath $bootstrapper
     if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Microsoft Corporation') { throw 'WebView2 bootstrapper signature validation failed' }
@@ -31,9 +32,11 @@ try {
     $compiler = Join-Path $compilerRoot 'ISCC.exe'
     if (-not (Test-Path -LiteralPath $compiler)) {
         $setup = Join-Path $dependencyDir 'innosetup-6.4.3.exe'
-        Invoke-WebRequest -Uri 'https://github.com/jrsoftware/issrc/releases/download/is-6_4_3/innosetup-6.4.3.exe' -OutFile $setup -UseBasicParsing
-        $signature = Get-AuthenticodeSignature -LiteralPath $setup
-        if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Jordan Russell') { throw 'Inno Setup signature validation failed' }
+        Invoke-WebRequest -Uri 'https://github.com/jrsoftware/issrc/releases/download/is-6_4_3/innosetup-6.4.3.exe' -OutFile $setup -UseBasicParsing -TimeoutSec 120
+        # Inno 6.4.3 uses its upstream .issig signature, not Windows Authenticode.
+        # Pinned file-hash from the official is-6_4_3 release's .exe.issig manifest.
+        $compilerHash = 'f3c42116542c4cc57263c5ba6c4feabfc49fe771f2f98a79d2f7628b8762723b'
+        if ((Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant() -ne $compilerHash) { throw 'Inno Setup checksum validation failed' }
         $arguments = @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/NOICONS','/CURRENTUSER',('/DIR="' + $compilerRoot + '"'))
         $process = Start-Process -FilePath $setup -ArgumentList $arguments -WindowStyle Hidden -PassThru -Wait
         if ($process.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $compiler)) { throw 'Inno Setup installation failed' }

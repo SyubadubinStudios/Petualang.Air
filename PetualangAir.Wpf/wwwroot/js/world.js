@@ -110,7 +110,7 @@ export class BiomeWorld {
         for (let i = 0; i < 18; i++) {
             const a = i / 18 * Math.PI * 2, x = Math.sin(a) * 83, z = Math.cos(a) * 83;
             if (b === 'SungaiGunung') {
-                island(this.root, x, z, 17, 12 + i % 3 * 5, 0x52674b); tree(this.root, x, z);
+                island(this.root, x, z, 17, 12 + i % 3 * 5, 0x52674b); tree(this.root, x, z).position.y = (12 + i % 3 * 5) * 1.12 - .7;
                 if (i % 2 === 0) this.obstacle(i % 4 ? 'log' : 'rock', Math.sin(a) * 37, Math.cos(a) * 37);
             } else if (b === 'HutanGambut') {
                 tree(this.root, x * .7, z * .7, true); tree(this.root, x, z, true);
@@ -126,7 +126,7 @@ export class BiomeWorld {
                 for (let j = 1; j < h; j += 2) box(this.root, 0xffd48a, x * .8, j, z * .8 - 4.55, 5, .65, .1);
                 if (i % 4 === 0) this.obstacle('klotok', x * .3, z * .3, 2.5);
             } else if (b === 'LautKarang') {
-                island(this.root, x, z, 12, 15, 0x6b8058); tree(this.root, x, z);
+                island(this.root, x, z, 12, 15, 0x6b8058); tree(this.root, x, z).position.y = 16.1;
                 if (i % 2 === 0) this.obstacle('coral', x * .35, z * .35, 1.5);
                 if (i % 6 === 0) this.obstacle('jellyfish', x * .55, z * .55, 1.6);
                 const school = fish(this.root, [0xffc85b, 0x4ae0d0, 0xff875d][i % 3]); school.position.set(x * .45, -.2, z * .45); school.userData = { kind: 'fish', phase: a }; this.animated.push(school);

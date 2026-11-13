@@ -42,7 +42,7 @@ export class CinematicGraphics {
         this.water.rotation.x = -Math.PI / 2; scene.add(this.water);
         this.waterBase = this.waterGeometry.attributes.position.array.slice();
         // Fine foam follows wave-normal crests instead of using particle sheets.
-        this.water.material.fragmentShader = this.water.material.fragmentShader.replace('gl_FragColor = vec4( outgoingLight, alpha );', `
+        this.water.material.fragmentShader = this.water.material.fragmentShader.replace('float rf0 = 0.3;', 'float rf0 = 0.02;').replace('gl_FragColor = vec4( outgoingLight, alpha );', `
             float ridge = abs(noise.x + noise.z) * 0.5;
             float foam = smoothstep(0.6, 0.95, ridge) * (0.5 + 0.5 * sin(worldPosition.x * 0.8 + time));
             outgoingLight = mix(outgoingLight, vec3(0.79, 0.90, 0.85), foam * 0.22);

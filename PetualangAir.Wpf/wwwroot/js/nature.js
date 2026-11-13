@@ -24,6 +24,15 @@ export class NaturalDetails {
         for (let i=0;i<count;i++) {
             const a=i*2.399, ring = 66+(i%7)*2.2;
             dummy.position.set(Math.sin(a)*ring, .1, Math.cos(a)*ring);
+            if (b === 'SungaiGunung' || b === 'LautKarang') {
+                for (let j = 0; j < 18; j++) {
+                    const angle = j / 18 * Math.PI * 2, px = dummy.position.x - Math.sin(angle)*83, pz = dummy.position.z - Math.cos(angle)*83;
+                    const width = b === 'LautKarang' ? 12 : 17, height = b === 'LautKarang' ? 15 : 12 + j % 3 * 5;
+                    const falloff = Math.pow(Math.max(0,1-(px*px+pz*pz)/(width*width)),1.7);
+                    const ridge = 1+.22*Math.sin(px*.6+pz*.35)+.12*Math.cos(pz*1.1-px*.25)+.06*Math.sin(px*2.7);
+                    dummy.position.y = Math.max(dummy.position.y, falloff*height*ridge-.7);
+                }
+            }
             dummy.rotation.set((i%4)*.2, a, (i%3-1)*.25);dummy.scale.setScalar(.6+(i%5)*.17);dummy.updateMatrix();this.leaves.setMatrixAt(i,dummy.matrix);
             this.leaves.setColorAt(i,new THREE.Color(colors[i%2]));
         }
