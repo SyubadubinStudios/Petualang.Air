@@ -8,7 +8,7 @@ Repo: [SyubadubinStudios/Petualang.Air](https://github.com/SyubadubinStudios/Pet
 ./tools/build-release.ps1 -Version 1.0.0
 ```
 
-Skrip menjalankan pengujian C# dan JS, mem-publish `win-x64` self-contained, memverifikasi aset, lalu mengompilasi installer Inno Setup 6.4.3. Compiler dan bootstrapper WebView2 diunduh dari sumber resmi, diperiksa tanda tangan Authenticode-nya, dan disimpan dalam `artifacts/dependencies/`.
+Skrip menjalankan pengujian C# dan JS, mem-publish `win-x64` self-contained, memverifikasi aset, lalu mengompilasi installer Inno Setup 6.4.3. Compiler dan bootstrapper WebView2 diunduh dari sumber resmi dan disimpan dalam `artifacts/dependencies/`. Hash SHA-256 compiler dipatok dari manifest `.issig` rilis resmi; bootstrapper WebView2 diperiksa tanda tangan Authenticode Microsoft-nya.
 
 Hasil dalam `artifacts/release/`:
 
@@ -35,6 +35,6 @@ Action dipatok ke commit SHA. Job build hanya memiliki `contents: read`; job rel
 
 ## Status penandatanganan
 
-Installer game belum ditandatangani dengan sertifikat penerbit Syubadubin Studios. Tanda tangan compiler/bootstrapper diverifikasi, tetapi itu bukan tanda tangan installer game. Windows dapat menampilkan SmartScreen untuk binary baru yang belum memiliki reputasi. Tambahkan proses signing dengan sertifikat organisasi sebelum distribusi komersial; jangan menyimpan private key di repo.
+Installer game belum ditandatangani dengan sertifikat penerbit Syubadubin Studios. Integritas compiler dan tanda tangan bootstrapper diverifikasi, tetapi itu bukan tanda tangan installer game. Windows dapat menampilkan SmartScreen untuk binary baru yang belum memiliki reputasi. Tambahkan proses signing dengan sertifikat organisasi sebelum distribusi komersial; jangan menyimpan private key di repo.
 
 Referensi: [Inno Setup](https://jrsoftware.org/ishelp/), [distribusi WebView2](https://learn.microsoft.com/microsoft-edge/webview2/concepts/distribution).
